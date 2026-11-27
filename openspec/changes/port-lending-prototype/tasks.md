@@ -70,8 +70,8 @@ steps run from the repo root unless stated.
   - hides AI model routes when the flag is off.
 
   Read `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md` first. Verify proxy unit tests for one allowed, one forbidden and one signed-out request per role, plus the AI-flag case.
-- [ ] 4.4 Build the two-step `/sign-in` with react-hook-form and zod, with the verbatim errors. It sets the mock session cookie and redirects to the role's landing route. Verify tests for wrong password, the code step appearing only after valid credentials, a bad code, and the landing route for all 8 accounts.
-- [ ] 4.5 Build the console layout:
+- [x] 4.4 Build the two-step `/sign-in` with react-hook-form and zod, with the verbatim errors. It sets the mock session cookie and redirects to the role's landing route. Verify tests for wrong password, the code step appearing only after valid credentials, a bad code, and the landing route for all 8 accounts.
+- [x] 4.5 Build the console layout:
   - the strip (app name, borrower-app link, bell);
   - the role-filtered grouped sidebar with nav counts;
   - user details with sign-out beside them;
@@ -79,7 +79,7 @@ steps run from the repo root unless stated.
   - root `loading.tsx`, `error.tsx`, `not-found.tsx` and `/denied`, which logs the refusal.
 
   Verify tests that the sidebar items match the access map per role, that sign-out clears the cookie, and that reset restores the seed with the user still signed in.
-- [ ] 4.6 Build the notifications bell dropdown (role-specific, unread count, scroll-loads 10, mark all read, View all) and `/notifications` (unread pill, Status and Type filters, 10 per page, no stat cards). Verify ported prototype checks: 10 then 20 rows on scroll, the page shows 10 with pager buttons, the "N unread" text, and opening an item marks it read and navigates.
+- [x] 4.6 Build the notifications bell dropdown (role-specific, unread count, scroll-loads 10, mark all read, View all) and `/notifications` (unread pill, Status and Type filters, 10 per page, no stat cards). Verify ported prototype checks: 10 then 20 rows on scroll, the page shows 10 with pager buttons, the "N unread" text, and opening an item marks it read and navigates.
 
 ## 5. staff-web: My work and applications (spec: staff-console queues, case detail, officer review, approver, assisted application)
 

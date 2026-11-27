@@ -41,7 +41,7 @@ describe("DocumentViewer", () => {
   it("shows an ID card with file name and version", () => {
     render(
       <DocumentViewer open onOpenChange={() => {}} title="Government ID (PhilSys)" meta={meta}>
-        <IdCard heading="Republic of the Philippines · Philippine identification card" initials="JC" fields={[{ label: "PSN", value: "PSN-••••-••••-1420", mono: true }]} />
+        <IdCard heading="Republic of the Philippines · Philippine identification card" initials="JD" fields={[{ label: "PSN", value: "PSN-••••-••••-1420", mono: true }]} />
       </DocumentViewer>
     )
     expect(screen.getByText("gov_id_scan.jpg")).toBeInTheDocument()
@@ -64,8 +64,8 @@ describe("DocumentViewer", () => {
 })
 
 describe("Avatar", () => {
-  it("takes first and last initials", () => {
-    expect(initialsOf("Juan Dela Cruz")).toBe("JC")
+  it("takes the first two words' initials", () => {
+    expect(initialsOf("Juan Dela Cruz")).toBe("JD")
     expect(initialsOf("Bea")).toBe("B")
   })
 })

@@ -1,13 +1,15 @@
 import * as React from "react"
 import { cn } from "cn"
 
-/** Two-letter initials from a full name, e.g. "Juan Dela Cruz" → "JC". */
+/** Initials of the first two words, as the prototype: "Juan Dela Cruz" → "JD". */
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (!parts.length) return "?"
-  const first = parts[0]?.[0] ?? ""
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : ""
-  return (first + last).toUpperCase()
+  return parts
+    .slice(0, 2)
+    .map((p) => p.charAt(0))
+    .join("")
+    .toUpperCase()
 }
 
 const tones = {

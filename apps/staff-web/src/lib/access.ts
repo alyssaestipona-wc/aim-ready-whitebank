@@ -150,3 +150,17 @@ export function isSessionRole(v: string | undefined | null): v is SessionRole {
 export function flagsFromCookie(v: string | undefined | null): { ai: boolean } {
   return { ai: v === undefined || v === null ? true : v.split(",").includes("ai") }
 }
+
+/**
+ * Turns a notification or row target such as "case:APP-2041" or
+ * "booking:APP-2054" into a URL, or null when the role may not open it.
+ */
+export function hrefFor(target: string, role: SessionRole, flags: { ai: boolean }): string | null {
+  const [key, param] = target.split(":") as [string, string | undefined]
+  if (!allowed(role, key, flags)) return null
+  if (key === "case") return `/applications/${param}`
+  if (key === "product") return `/config/products/${param}`
+  if (key === "booking" && param) return `/booking?case=${encodeURIComponent(param)}`
+  const item = NAV_ITEMS.find((i) => i.key === key)
+  return item ? item.path : null
+}

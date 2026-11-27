@@ -180,7 +180,7 @@ steps run from the repo root unless stated.
 ## 10. Integration checks
 
 - [x] 10.1 Run `pnpm build`, `pnpm lint` and `pnpm test` at the root. Verify all workspaces pass.
-- [ ] 10.2 Run a WebKit (Safari engine) smoke pass over every route in both apps at 1440 px and 400 px. Verify zero page errors and no horizontal page scroll, and record the results in the PR description.
+- [x] 10.2 Run a WebKit (Safari engine) smoke pass over every route in both apps at 1440 px and 400 px. Verify zero page errors and no horizontal page scroll, and record the results in the PR description.
 - [ ] 10.3 Walk every Scenario in the three spec deltas by hand against the running apps. Verify each one, and note any deviation in the PR description.
 
 ## Workflow follow-up

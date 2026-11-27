@@ -23,6 +23,7 @@ function policy(over: Partial<DecisionPolicy> = {}): DecisionPolicy {
     bureauDown: false,
     ruleSetVersion: "v4",
     modelVersion: "PL-Score 3.2",
+    bankName: "Kalinaw",
     ...over,
   };
 }

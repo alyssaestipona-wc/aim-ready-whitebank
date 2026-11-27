@@ -8,7 +8,7 @@ import { renderWithToasts, setup } from "./helpers"
 
 describe("denied screen", () => {
   it("explains the refusal and records it in the audit log", async () => {
-    setup("branch", "/denied", "route=audit")
+    setup("branch", "/compliance/audit")
     renderWithToasts(<DeniedNotice />)
     expect(screen.getByRole("heading", { name: "You don’t have access to this" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Go to my work" })).toHaveAttribute("href", "/queues")

@@ -175,7 +175,7 @@ export default function DecisioningPage() {
                     {r.id === "dti" ? (
                       editing ? (
                         <span className="inline-flex items-center gap-1">
-                          <Input aria-label="Debt-to-income cap" type="number" className="w-[76px] px-2 py-1" value={r.param ?? 0} onChange={(e) => run(setDraftDti(Number(e.target.value)))} /> %
+                          <DtiInput value={r.param ?? 0} onCommit={(v) => run(setDraftDti(v))} /> %
                         </span>
                       ) : (
                         `dti > ${r.param}%`
@@ -327,7 +327,7 @@ export default function DecisioningPage() {
         description="Build conditions on application, bureau, relationship or derived variables. The rule joins the draft; check the test harness before publishing."
         okLabel="Add to draft"
         onConfirm={async () => {
-          const r = await addDraftRule({ name: rule.name, type: rule.type, logic: rule.logic, conds: conds.map((c) => ({ attr: c.attr, op: c.op, val: Number(c.val) })) })
+          const r = await addDraftRule({ name: rule.name, type: rule.type, logic: rule.logic, conds: conds.map((c) => ({ attr: c.attr, op: c.op, val: String(c.val).trim() === "" ? Number.NaN : Number(c.val) })) })
           if (!r.ok) return r.error
           await run(Promise.resolve(r))
         }}
@@ -384,4 +384,24 @@ export default function DecisioningPage() {
 /** One coloured stretch of the band scale; its width is data, passed as a CSS variable. */
 function BandSegment({ pct, className }: { pct: number; className: string }) {
   return <span className={cn("w-(--w) flex-none", className)} style={{ "--w": `${Math.max(0, pct)}%` } as React.CSSProperties} />
+}
+
+/** DTI cap field: edits freely, commits on blur, and stays red while invalid. */
+function DtiInput({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
+  const [text, setText] = React.useState(String(value))
+  const n = text.trim() === "" ? Number.NaN : Number(text)
+  const bad = !Number.isFinite(n) || n <= 0 || n > 100
+  return (
+    <Input
+      aria-label="Debt-to-income cap"
+      type="number"
+      className="w-[76px] px-2 py-1"
+      value={text}
+      aria-invalid={bad || undefined}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        if (!bad) onCommit(n)
+      }}
+    />
+  )
 }

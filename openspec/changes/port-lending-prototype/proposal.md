@@ -70,9 +70,8 @@ None. `web-bootstrap` and `api-bootstrap` requirements are unchanged.
 - **Shared packages:**
   - `packages/ui` gains new runtime dependencies, justified in design.md D3:
     - `radix-ui`, `lucide-react` and `tw-animate-css`, which `apps/web` already uses;
-    - `react-hook-form`, `zod` and `@hookform/resolvers`, which the AGENTS frontend conventions prescribe.
   - devDependencies `vitest`, `jsdom` and Testing Library, for component tests.
-  - The two apps use the same set.
+  - The two apps use the same libraries, plus `react-hook-form`, `zod` and `@hookform/resolvers` for their forms, as the AGENTS frontend conventions prescribe.
   - `packages/ui` and `packages/core` do not import each other (ADR-0002). Money-input formatting stays in `packages/ui`.
   - `packages/core` gains code and a `vitest` devDependency for its unit tests. It gets no runtime dependencies.
 - **`packages/contracts`:** unchanged. No API contract changes.

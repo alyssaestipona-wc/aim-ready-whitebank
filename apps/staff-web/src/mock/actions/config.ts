@@ -86,6 +86,7 @@ export async function createProductDraft(code: ProductCode): Promise<ActionResul
 
 /** Edits the open draft (no audit entry, as the prototype). */
 export async function setProductDraftField(field: "max" | "autoLimit", value: number | null): Promise<ActionResult> {
+  if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {
     if (!s.pdraft || s.pdraft.inReview) return fail("No draft to edit.", true)
     s.pdraft[field] = value ?? 0
@@ -94,7 +95,9 @@ export async function setProductDraftField(field: "max" | "autoLimit", value: nu
 }
 
 export async function discardProductDraft(): Promise<ActionResult> {
+  if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {
+    if (s.pdraft) log(s, role(), null, `Discarded the ${products(s)[s.pdraft.code].name} draft`)
     s.pdraft = null
     return ok("Draft discarded")
   })
@@ -169,6 +172,7 @@ export async function toggleDraftRule(index: number): Promise<ActionResult> {
 }
 
 export async function setDraftDti(param: number): Promise<ActionResult> {
+  if (!Number.isFinite(param) || param <= 0 || param > 100) return fail("Enter a debt-to-income cap between 1 and 100%.")
   return editDraft((d) => {
     const r = d.rules.find((x) => x.id === "dti")
     if (r) r.param = param
@@ -198,6 +202,7 @@ export type NewRuleInput = { name: string; type: PolicyRule["type"]; logic: "AND
 export async function addDraftRule(input: NewRuleInput): Promise<ActionResult> {
   const nm = input.name.trim()
   if (!nm) return fail("Give the rule a name.")
+  if (!input.conds.length || input.conds.some((c) => !Number.isFinite(c.val))) return fail("Enter a number for every condition.")
   const r = editDraft((d) => {
     d.rules.push({ id: `c${Date.now().toString(36)}`, name: nm, type: input.type, active: true, custom: true, logic: input.logic, conds: input.conds })
   })

@@ -143,7 +143,7 @@ export const SESSION_COOKIE = "wbl_staff_session"
 export const FLAGS_COOKIE = "wbl_flags"
 
 export function isSessionRole(v: string | undefined | null): v is SessionRole {
-  return !!v && (v in LANDING)
+  return !!v && Object.hasOwn(LANDING, v)
 }
 
 /** Flags cookie: absent means defaults (AI on); "" means AI off. */

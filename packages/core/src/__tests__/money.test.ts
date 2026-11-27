@@ -8,6 +8,7 @@ describe("toCentavos", () => {
   });
   it("rounds half away from zero to the centavo", () => {
     expect(toCentavos(1.005)).toBe(101);
+    expect(toCentavos(1000.005)).toBe(100001);
     expect(toCentavos(7706.666666)).toBe(770667);
   });
   it("accepts zero", () => {

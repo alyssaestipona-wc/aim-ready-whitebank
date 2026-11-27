@@ -27,7 +27,7 @@ function writeCookie(name: string, value: string | null): void {
 
 export function getSessionRole(): RoleKey | null {
   const v = readCookie(SESSION_COOKIE)
-  return v && v in USERS ? (v as RoleKey) : null
+  return v && Object.hasOwn(USERS, v) ? (v as RoleKey) : null
 }
 
 export function setSessionRole(role: RoleKey | null): void {

@@ -14,8 +14,9 @@ export type Centavos = number;
 export function toCentavos(pesos: number): Centavos {
   if (!Number.isFinite(pesos)) throw new RangeError(`Not a finite amount: ${pesos}`);
   if (pesos < 0) throw new RangeError(`Amount cannot be negative: ${pesos}`);
-  // Scale through a string-free epsilon nudge so 1.005 rounds to 101, not 100.
-  return Math.round(pesos * 100 + Number.EPSILON * 100);
+  // Round the scaled value to 15 significant digits first, which removes the
+  // binary representation error (1.005 * 100 = 100.49999…), then to the centavo.
+  return Math.round(Number((pesos * 100).toPrecision(15)));
 }
 
 /** Converts integer centavos back to pesos, for display maths only. */

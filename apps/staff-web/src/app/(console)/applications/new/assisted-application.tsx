@@ -191,7 +191,7 @@ export function AssistedApplication() {
               </div>
               <MessageChip>
                 Indicative monthly repayment <b className="tabular-nums">{peso(est, 2)}</b>
-                <span className="text-muted-foreground">grade C pricing · calculated by core</span>
+                <span className="text-muted-foreground">grade C pricing · calculated by core (simulated)</span>
               </MessageChip>
             </Section>
             <Section title="3 · Documents">

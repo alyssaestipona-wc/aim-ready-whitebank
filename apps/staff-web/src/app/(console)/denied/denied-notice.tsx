@@ -1,18 +1,23 @@
 "use client"
 
 import { PageHeader } from "@aim-ready/ui"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import * as React from "react"
 
 import { GoToMyWork } from "@/components/go-to-my-work"
+import { matchRoute } from "@/lib/access"
 import { logRefusal } from "@/mock"
 
 /**
  * The server refused the route (see src/proxy.ts) and rewrote the request
- * here; this records the refusal in the audit log once per visit.
+ * here; this records the refusal in the audit log once per visit. After a
+ * rewrite the browser still shows the refused path, so read the route from
+ * it, falling back to the query the proxy adds.
  */
 export function DeniedNotice() {
-  const route = useSearchParams().get("route") ?? "unknown"
+  const pathname = usePathname()
+  const query = useSearchParams().get("route")
+  const route = (pathname !== "/denied" && matchRoute(pathname)?.key) || query || "unknown"
   const logged = React.useRef<string | null>(null)
   React.useEffect(() => {
     if (logged.current === route) return

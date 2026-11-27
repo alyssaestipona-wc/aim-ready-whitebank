@@ -173,7 +173,8 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
       if (missing.length) return `Please tick the ${missing.join(", ")} to submit.`
       const dup = s0.apps.find((a) => a.borrower === b.id && a.product === f.product && !["Disbursed", "Declined", "Withdrawn"].includes(a.stage))
       if (dup) return `You already have an open ${P.name.toLowerCase()} application (${dup.id}). We’ll update you on that one first.`
-      if (f.amount === null || f.income === null || !(f.income > 0)) return "Enter your monthly income."
+      if (f.amount === null || !(f.amount >= P.min && f.amount <= P.max)) return `Enter an amount between ${formatPeso(P.min)} and ${formatPeso(P.max)}.`
+      if (f.income === null || !(f.income > 0)) return "Enter your monthly income."
       return null
     },
 
@@ -193,7 +194,14 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
         POLICY
       )
       let id = ""
+      let dupError = ""
       store.update((s) => {
+        // Re-check after the wait: a second submit (another tab) may have landed.
+        const dup = s.apps.find((x) => x.borrower === b.id && x.product === f.product && !["Disbursed", "Declined", "Withdrawn"].includes(x.stage))
+        if (dup) {
+          dupError = `You already have an open ${PRODUCTS[f.product].name.toLowerCase()} application (${dup.id}). We’ll update you on that one first.`
+          return
+        }
         s.seq += 1
         id = `APP-${3000 + s.seq}`
         const created = stamp(s)
@@ -247,6 +255,7 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
         if (d.outcome === "refer") log(s, a, "Assigned to Miguel Ramos (consumer credit queue, round robin)", "System")
         s.apps.unshift(a)
       })
+      if (dupError) return { ok: false, error: dupError }
       return { ok: true, id }
     },
 

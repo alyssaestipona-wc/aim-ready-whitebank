@@ -58,7 +58,8 @@ export default function SigningPage() {
                     onClick={async (e) => {
                       e.stopPropagation()
                       const r = await generateDocs(a.id)
-                      if (r.ok && r.toast) toast(r.toast)
+                      if (!r.ok) toast(r.error, "bad")
+                      else if (r.toast) toast(r.toast)
                     }}
                   >
                     Generate and send

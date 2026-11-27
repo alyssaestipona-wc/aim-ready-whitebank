@@ -53,6 +53,7 @@ export const POLICY: DecisionPolicy = {
   bureauDown: false,
   ruleSetVersion: "v4",
   modelVersion: "PL-Score 3.2",
+  bankName: "Kalinaw",
 }
 
 export const BORROWERS: Record<string, Borrower> = {

@@ -133,7 +133,7 @@ function Preview({ s, a, name, status, revealed }: { s: StaffState; a: Applicati
       return (
         <DocPaper title="Disclosure statement" sub={`Truth in Lending Act · template v3 · ${a.id}`} stamp={signed ? "Acknowledged" : undefined}>
           <DisclosureRows terms={tm} />
-          <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by Kalinaw core banking.{signed ? " Acknowledged by the borrower before signing." : ""}</p>
+          <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by Kalinaw core banking (simulated).{signed ? " Acknowledged by the borrower before signing." : ""}</p>
         </DocPaper>
       )
     case "sheet":

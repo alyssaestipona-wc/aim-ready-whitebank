@@ -1,15 +1,17 @@
 "use client"
 
-import { Button, Card, ListView, PageHeader, useToast } from "@aim-ready/ui"
+import { Button, Card, ConfirmDialog, ListView, PageHeader, useToast } from "@aim-ready/ui"
+import * as React from "react"
 
 import { PRODUCT_FILTER, appText } from "@/components/app-list"
 import { KeyValues, Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
-import { isReadOnly, retryBooking, tOrd } from "@/mock"
+import { isReadOnly, peso, retryBooking, tOrd, type Application } from "@/mock"
 
 export default function ExceptionsPage() {
   const ctx = useConsole()
   const toast = useToast()
+  const [retry, setRetry] = React.useState<Application | null>(null)
   if (!ctx) return null
   const ro = isReadOnly(ctx.role)
   const list = ctx.s.apps.filter((a) => a.booking?.status === "failed").sort((x, y) => tOrd(y.booking?.failedAt) - tOrd(x.booking?.failedAt))
@@ -48,10 +50,7 @@ export default function ExceptionsPage() {
                   variant="primary"
                   disabled={ro}
                   title={ro ? "Read-only access" : undefined}
-                  onClick={async () => {
-                    const r = await retryBooking(a.id)
-                    if (r.ok && r.toast) toast(r.toast)
-                  }}
+                  onClick={() => setRetry(a)}
                 >
                   Retry booking
                 </Button>
@@ -60,6 +59,20 @@ export default function ExceptionsPage() {
           ]}
         />
       </Card>
+      {retry && (
+        <ConfirmDialog
+          open
+          onOpenChange={(o) => !o && setRetry(null)}
+          title={`Retry booking for ${retry.name}?`}
+          description={`Sends the booking to core again with the same idempotency key ${retry.booking?.key ?? ""}. If no account exists yet, core creates it and releases ${peso(retry.offer?.amount ?? retry.amount)}.`}
+          okLabel="Retry booking"
+          onConfirm={async () => {
+            const r = await retryBooking(retry.id)
+            if (!r.ok) return r.error
+            if (r.toast) toast(r.toast)
+          }}
+        />
+      )}
       <Section title="Reconciliation · today" className="mt-3.5">
         <KeyValues items={[["Bookings sent to core", String(booked + list.length)], ["Accounts confirmed by core", String(booked)], ["Open exceptions", String(list.length)], ["Duplicates detected", "0"]]} />
       </Section>

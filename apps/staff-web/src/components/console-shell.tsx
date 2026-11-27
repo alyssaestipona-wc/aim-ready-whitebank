@@ -29,6 +29,17 @@ import { useConsole } from "./use-console"
 
 const DETAIL_PARENT: Record<string, RouteKey> = { case: "apps", product: "products" }
 
+const WIDE = "(min-width: 900px)"
+function subscribeWide(cb: () => void) {
+  const m = window.matchMedia(WIDE)
+  m.addEventListener("change", cb)
+  return () => m.removeEventListener("change", cb)
+}
+/** True when the sidebar is always visible (900px and up). */
+function useWide(): boolean {
+  return React.useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE).matches, () => true)
+}
+
 /** Placeholder while the simulated state loads from this browser. */
 export function ShellSkeleton() {
   return (
@@ -52,6 +63,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const [menuOpenAt, setMenuOpenAt] = React.useState<string | null>(null)
   const menuOpen = menuOpenAt === pathname
   const setMenuOpen = (open: boolean) => setMenuOpenAt(open ? pathname : null)
+  const wide = useWide()
   const [resetOpen, setResetOpen] = React.useState(false)
 
   // Keep the server-visible flags cookie in step with this browser's state.
@@ -111,7 +123,9 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-[calc(100vh-38px)]">
         {menuOpen && <div aria-hidden="true" className="fixed inset-0 z-[250] bg-ink/40 min-[900px]:hidden" onClick={() => setMenuOpen(false)} />}
         <aside
+          id="main-nav"
           aria-label="Main navigation"
+          inert={!wide && !menuOpen}
           className={cn(
             "fixed inset-y-0 left-0 z-[300] flex w-[244px] flex-none flex-col bg-ink text-white transition-transform min-[900px]:sticky min-[900px]:top-[38px] min-[900px]:z-auto min-[900px]:h-[calc(100vh-38px)] min-[900px]:translate-x-0",
             menuOpen ? "translate-x-0" : "-translate-x-full"
@@ -175,7 +189,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-[38px] z-50 flex items-center gap-3 border-b border-border bg-white/95 px-4 py-2.5 min-[900px]:px-7">
-            <Button variant="default" size="icon" className="min-[900px]:hidden" aria-label="Toggle navigation" onClick={() => setMenuOpen(!menuOpen)}>
+            <Button variant="default" size="icon" className="min-[900px]:hidden" aria-label="Toggle navigation" aria-controls="main-nav" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
               <Menu />
             </Button>
             <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-2 overflow-hidden text-sm whitespace-nowrap text-muted-foreground min-[900px]:flex">

@@ -17,6 +17,7 @@ import type { Application, AssistedDraft, IntakeDraft, ProductCode, StaffState }
 import { fail, ok, type ActionResult } from "./result"
 
 function withCase(id: string, fn: (s: StaffState, a: Application) => ActionResult): ActionResult {
+  if (!getSessionRole()) return fail("Your session has ended. Sign in again.", true)
   return update((s) => {
     const a = findApp(s, id)
     if (!a) return fail("That case no longer exists.", true)
@@ -84,11 +85,14 @@ export async function recommend(id: string, input: RecommendInput): Promise<Acti
   return withCase(id, (s, a) => {
     const P = products(s)[a.product]
     let d = input.decision
-    let amt = input.amount ?? Number.NaN
+    let amt = input.amount ?? (input.decision === "decline" ? a.amount : Number.NaN)
     let ten = input.tenor
     if (d !== "decline" && !(amt >= P.min && amt <= P.max)) return fail(`Amount must be between ${peso(P.min)} and ${peso(P.max)}.`)
     if (d !== "decline" && !(ten >= P.tmin && ten <= P.tmax)) return fail(`Tenor must be ${P.tmin} to ${P.tmax} months.`)
     if (d === "approve") {
+      amt = a.amount
+      ten = a.tenor
+    } else if (d === "decline") {
       amt = a.amount
       ten = a.tenor
     } else if (d === "counter" && amt === a.amount && ten === a.tenor) d = "approve"
@@ -98,17 +102,17 @@ export async function recommend(id: string, input: RecommendInput): Promise<Acti
     a.stage = "Approval"
     a.owner = null
     a.sla = 8
-    log(s, role(), a, `Recommended ${d === "decline" ? "decline" : `${d === "counter" ? "counter-offer " : "approval "}${peso(amt)} / ${ten} months`}${ov.differs ? ` · override (${ov.level} ₱50,000 threshold): ${input.reason}` : ""}`)
+    log(s, role(), a, `Recommended ${d === "decline" ? "decline" : `${d === "counter" ? "counter-offer " : "approval "}${peso(amt)} / ${ten} months`}${ov.differs ? ` · override (${ov.level} ${peso(OVERRIDE_THRESHOLD)} threshold): ${input.reason}` : ""}`)
     return ok("Recommendation sent to Teresa Lim (approver)")
   })
 }
 
 /**
  * First step of Approve: refuses the recommender (segregation of duties),
- * confirms a recommended decline, or says whether the case is within the
- * approver's authority so the UI can ask for confirmation or committee routing.
+ * then says which confirmation the UI should show: the recommended decline,
+ * approval within authority, or routing to committee. Changes nothing else.
  */
-export async function startApproval(id: string): Promise<ActionResult & { next?: "confirm" | "committee" }> {
+export async function startApproval(id: string): Promise<ActionResult & { next?: "confirm" | "committee" | "confirm-decline" }> {
   const r = role()
   const s0 = getState()
   const a0 = findApp(s0, id)
@@ -121,15 +125,7 @@ export async function startApproval(id: string): Promise<ActionResult & { next?:
     })
     return fail("You recommended this case. A different approver must decide it.", true)
   }
-  if (rc.decision === "decline") {
-    // The automated outcome stays as decided; the human decline is the stage.
-    return withCase(id, (s, a) => {
-      a.stage = "Declined"
-      a.sla = null
-      log(s, r, a, "Confirmed decline; borrower notified with plain-language reasons")
-      return ok("Declined. Borrower notified.")
-    })
-  }
+  if (rc.decision === "decline") return { ok: true, next: "confirm-decline" }
   const auth = USERS.approver
   if (rc.amount > (auth.limit ?? 0) || !(auth.grades ?? []).includes(a0.grade ?? "E")) return { ok: true, next: "committee" }
   return { ok: true, next: "confirm" }
@@ -140,6 +136,20 @@ export function recommendedMonthly(a: Application): Centavos {
   const rc = a.recommendation
   if (!rc) return 0
   return termsOf(getState(), { product: a.product, amount: rc.amount, tenor: rc.tenor, grade: a.grade, offer: { amount: rc.amount, tenor: rc.tenor, grade: a.grade ?? "C" } }).monthlyPayment
+}
+
+/** Approver confirms an officer's decline recommendation. */
+export async function confirmDecline(id: string): Promise<ActionResult> {
+  return withCase(id, (s, a) => {
+    const rc = a.recommendation
+    if (!rc || rc.decision !== "decline" || a.stage !== "Approval") return fail("Nothing to decline.", true)
+    if (rc.by === me(role()).name) return fail("You recommended this case. A different approver must decide it.", true)
+    // The automated outcome stays as decided; the human decline is the stage.
+    a.stage = "Declined"
+    a.sla = null
+    log(s, role(), a, "Confirmed decline; borrower notified with plain-language reasons")
+    return ok("Declined. Borrower notified.")
+  })
 }
 
 export async function routeToCommittee(id: string): Promise<ActionResult> {
@@ -153,7 +163,11 @@ export async function routeToCommittee(id: string): Promise<ActionResult> {
 export async function approve(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     const rc = a.recommendation
-    if (!rc) return fail("Nothing to approve.", true)
+    if (!rc || a.stage !== "Approval") return fail("Nothing to approve.", true)
+    if (role() !== "approver") return fail("Only an approver can approve.", true)
+    if (rc.by === me(role()).name) return fail("You recommended this case. A different approver must decide it.", true)
+    const auth = USERS.approver
+    if (rc.amount > (auth.limit ?? 0) || !(auth.grades ?? []).includes(a.grade ?? "E")) return fail("Above your authority. Route it to credit committee.", true)
     a.offer = { amount: rc.amount, tenor: rc.tenor, grade: a.grade ?? "C" }
     a.stage = "Offer"
     a.sla = null

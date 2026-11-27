@@ -70,6 +70,7 @@ function seedPolicy(cfg: DecisionConfig) {
     bureauDown: cfg.bureauDown,
     ruleSetVersion: cfg.ruleset.pub,
     modelVersion: MODEL_VERSION,
+    bankName: "Kalinaw",
   }
 }
 

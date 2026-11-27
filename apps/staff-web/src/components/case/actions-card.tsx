@@ -9,6 +9,7 @@ import * as React from "react"
 import {
   DECLINE_CODES,
   INFO_ITEMS,
+  OVERRIDE_THRESHOLD,
   REASON_CODES,
   USERS,
   aiRecOf,
@@ -16,12 +17,12 @@ import {
   baseRole,
   canCheckBooking,
   checkBooking,
+  confirmDecline,
   declineCase,
   generateDocs,
   isReadOnly,
   me,
   overrideLevel,
-  getState,
   peso,
   pickCase,
   products,
@@ -44,7 +45,7 @@ import {
 import { CoreLabel, MessageChip, Note, Rows, Section } from "../bits"
 import { DisclosureRows } from "./disclosure"
 
-type Dialog = null | "req-info" | "recommend" | "approve" | "committee" | "decline" | "withdraw" | "disclosure" | "check"
+type Dialog = null | "req-info" | "recommend" | "approve" | "committee" | "decline" | "withdraw" | "disclosure" | "check" | "confirm-decline"
 
 function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -159,6 +160,7 @@ export function ActionsCard({ s, a, role }: { s: StaffState; a: Application; rol
               const res = await startApproval(a.id)
               if (!res.ok) return report(res)
               if (res.next === "committee") setDialog("committee")
+              else if (res.next === "confirm-decline") setDialog("confirm-decline")
               else if (res.next === "confirm") setDialog("approve")
               else report(res)
             }}
@@ -294,15 +296,26 @@ export function ActionsCard({ s, a, role }: { s: StaffState; a: Application; rol
         {tools.length > 0 && <div className="mt-3.5 flex flex-wrap gap-2 border-t border-border-soft pt-3">{tools}</div>}
       </Section>
       {dialog === "req-info" && <RequestInfoDialog a={a} onClose={() => setDialog(null)} report={report} />}
-      {dialog === "recommend" && <RecommendDialog a={a} onClose={() => setDialog(null)} report={report} />}
+      {dialog === "recommend" && <RecommendDialog s={s} a={a} onClose={() => setDialog(null)} report={report} />}
       {dialog === "approve" && a.recommendation && (
         <ConfirmDialog
           open
           onOpenChange={(o) => !o && setDialog(null)}
           title={`Approve ${peso(a.recommendation.amount)} over ${a.recommendation.tenor} months?`}
-          description={`Monthly repayment ${peso(recommendedMonthly(a), 2)} at grade ${a.grade}, calculated by core banking. The ${a.recommendation.decision === "counter" ? "counter-offer" : "offer"} goes to ${a.name} online.`}
+          description={`Monthly repayment ${peso(recommendedMonthly(a), 2)} at grade ${a.grade}, calculated by core banking (simulated). The ${a.recommendation.decision === "counter" ? "counter-offer" : "offer"} goes to ${a.name} online.`}
           okLabel="Approve and send offer"
           onConfirm={async () => report(await approve(a.id))}
+        />
+      )}
+      {dialog === "confirm-decline" && (
+        <ConfirmDialog
+          open
+          onOpenChange={(o) => !o && setDialog(null)}
+          title="Confirm the recommended decline?"
+          description="The borrower sees a plain-language decline with reason codes and no internal score."
+          okLabel="Confirm decline"
+          danger
+          onConfirm={async () => report(await confirmDecline(a.id))}
         />
       )}
       {dialog === "committee" && a.recommendation && (
@@ -320,7 +333,7 @@ export function ActionsCard({ s, a, role }: { s: StaffState; a: Application; rol
       {dialog === "disclosure" && (
         <ConfirmDialog open onOpenChange={(o) => !o && setDialog(null)} title="Disclosure statement (Truth in Lending)" description="Generated from the approved terms. The borrower acknowledges it before signing." okLabel="Close" noCancel onConfirm={() => undefined}>
           <DisclosureRows terms={termsOf(s, a)} />
-          <p className="mt-3 mb-0 text-[12.5px] text-muted-foreground">Every figure is calculated by WhiteBank core banking.</p>
+          <p className="mt-3 mb-0 text-[12.5px] text-muted-foreground">Every figure is calculated by WhiteBank core banking (simulated in this prototype).</p>
         </ConfirmDialog>
       )}
       {dialog === "check" && a.offer && (
@@ -393,7 +406,7 @@ function RequestInfoDialog({ a, onClose, report }: { a: Application; onClose: ()
   )
 }
 
-function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () => void; report: (r: ActionResult) => string | void }) {
+function RecommendDialog({ s, a, onClose, report }: { s: StaffState; a: Application; onClose: () => void; report: (r: ActionResult) => string | void }) {
   const ai = aiRecOf(a)
   const start = a.recDefault != null ? a.recDefault : ai.amount
   const [decision, setDecision] = React.useState<RecommendInput["decision"]>(start === a.amount ? "approve" : "counter")
@@ -404,7 +417,7 @@ function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () =
   const amtC = amount == null ? Number.NaN : toCentavos(amount)
   const ov = overrideLevel(a, decision, amtC, Number(tenor))
   const [tried, setTried] = React.useState(false)
-  const P = products(getState())[a.product]
+  const P = products(s)[a.product]
   const amountBad = tried && decision !== "decline" && !(amtC >= P.min && amtC <= P.max)
   const tenorBad = tried && decision !== "decline" && !(Number(tenor) >= P.tmin && Number(tenor) <= P.tmax)
   const reasonBad = tried && ov.differs && !reason
@@ -413,7 +426,7 @@ function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () =
       open
       onOpenChange={(o) => !o && onClose()}
       title="Recommend a decision"
-      description={`AI recommends ${ai.decision} ${peso(ai.amount)} over ${ai.tenor} months. Anything different needs a reason code; ₱50,000 or more away also needs a second approver.`}
+      description={`AI recommends ${ai.decision} ${peso(ai.amount)} over ${ai.tenor} months. Anything different needs a reason code; ${peso(OVERRIDE_THRESHOLD)} or more away also needs a second approver.`}
       okLabel="Send to approver"
       onConfirm={async () => {
         setTried(true)

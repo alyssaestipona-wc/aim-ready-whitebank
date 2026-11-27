@@ -88,7 +88,7 @@ export function DocumentPreview({ app: a, name, status }: { app: Application; na
             { label: "Late payment penalty", value: "3% of amount due per month" },
           ]}
         />
-        <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by Kalinaw core banking.{signed ? " Acknowledged by the borrower before signing." : ""}</p>
+        <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by Kalinaw core banking (simulated).{signed ? " Acknowledged by the borrower before signing." : ""}</p>
       </DocPaper>
     )
   return (

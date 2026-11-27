@@ -17,3 +17,8 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/navigation", () => ({ navigateHard: (path: string) => nav.hard(path) }))
 
 afterEach(() => cleanup())
+
+// jsdom has no matchMedia; tests run at desktop width.
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = ((query: string) => ({ matches: true, media: query, onchange: null, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false })) as typeof window.matchMedia
+}

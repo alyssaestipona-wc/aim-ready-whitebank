@@ -29,7 +29,7 @@ export function harness(s: StaffState, rules: PolicyRule[], bands: { approve: nu
   const p = products(s)
   const policy: DecisionPolicy = {
     rules, bands, triggers: triggers || s.cfg.triggers, autoLimits: { PL: p.PL.autoLimit, SL: p.SL.autoLimit }, automation: { PL: "live", SL: "live" },
-    killSwitch: false, bureauDown: false, ruleSetVersion: s.cfg.ruleset.pub, modelVersion: MODEL_VERSION,
+    killSwitch: false, bureauDown: false, ruleSetVersion: s.cfg.ruleset.pub, modelVersion: MODEL_VERSION, bankName: "Kalinaw",
   }
   const out: Record<Outcome, number> = { approve: 0, refer: 0, decline: 0 }
   for (let i = 0; i < 1240; i++) {

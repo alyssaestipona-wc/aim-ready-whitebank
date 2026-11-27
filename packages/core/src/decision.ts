@@ -79,6 +79,8 @@ export type DecisionPolicy = {
   bureauDown: boolean;
   ruleSetVersion: string;
   modelVersion: string;
+  /** The tenant's bank name, used in reason text. */
+  bankName: string;
 };
 
 export type RuleResult = { id: RuleId; name: string; res: "p" | "w" | "f"; val: string };
@@ -122,10 +124,10 @@ export function scoreOf(x: DecisionInput): number {
   return Math.max(450, Math.min(820, Math.round(s)));
 }
 
-function reasonsOf(x: DecisionInput, autoLimit: Centavos): Reason[] {
+function reasonsOf(x: DecisionInput, autoLimit: Centavos, bankName: string): Reason[] {
   const r: Reason[] = [];
   const years = x.years || 0;
-  if (x.stable) r.push({ t: "Stable salary credits to a Kalinaw account", pos: true });
+  if (x.stable) r.push({ t: `Stable salary credits to a ${bankName} account`, pos: true });
   if (years >= 3) r.push({ t: `Customer for ${years} years`, pos: true });
   if (x.bureau === "Full file") r.push({ t: "Established credit bureau history", pos: true });
   if (x.bureau === "Thin file") r.push({ t: "Thin bureau file: 1 trade line", pos: false });
@@ -160,7 +162,7 @@ export function simulateDecision(x: DecisionInput, policy: DecisionPolicy): Deci
   if (on("thin")) add("thin", "Bureau file sufficient", x.bureau === "Full file" ? "p" : "w", x.bureau);
   if (on("limit")) add("limit", "Amount within auto-approval limit", x.amount <= autoLimit ? "p" : "w", `limit ${formatPeso(autoLimit)}`);
 
-  const score = x.scoreOverride || scoreOf(x);
+  const score = x.scoreOverride ?? scoreOf(x);
   const attr: Record<CustomCondition["attr"], number> = {
     amount: fromCentavos(x.amount),
     age: x.age,
@@ -214,7 +216,7 @@ export function simulateDecision(x: DecisionInput, policy: DecisionPolicy): Deci
     rules,
     bands: { ...policy.bands },
     trigger: knock ? `Policy knockout: ${knock.name}` : trig.join(" · "),
-    reasons: knock ? [{ t: "Application does not meet policy requirements", pos: false }] : reasonsOf(x, autoLimit),
+    reasons: knock ? [{ t: "Application does not meet policy requirements", pos: false }] : reasonsOf(x, autoLimit, policy.bankName),
     ruleSetVersion: policy.ruleSetVersion,
     modelVersion: policy.modelVersion,
     bureauDown: policy.bureauDown,

@@ -155,7 +155,7 @@ describe("apply", () => {
     fireEvent.blur(amount)
     await userEvent.click(screen.getByRole("button", { name: "Continue" }))
     expect(screen.getByRole("alert")).toHaveTextContent("Enter an amount between ₱20,000 and ₱500,000.")
-    expect(screen.getByText("Step 1 of 3 · saved automatically, resume within 30 days")).toBeInTheDocument()
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument()
   })
 
   it("requires income on step 2 and keeps Back and Continue equal width", async () => {

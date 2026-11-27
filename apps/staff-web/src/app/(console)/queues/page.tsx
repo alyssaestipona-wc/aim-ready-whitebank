@@ -46,7 +46,8 @@ export default function QueuesPage() {
                 onClick={async (e) => {
                   e.stopPropagation()
                   const res = await pickCase(a.id)
-                  if (res.ok && res.toast) toast(res.toast)
+                  if (!res.ok) toast(res.error, "bad")
+                  else if (res.toast) toast(res.toast)
                 }}
               >
                 Pick

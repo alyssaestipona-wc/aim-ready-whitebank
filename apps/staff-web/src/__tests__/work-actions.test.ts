@@ -250,3 +250,33 @@ describe("intake", () => {
     expect(getState().drafts[idx]!.status).toBe("Draft")
   })
 })
+
+describe("code review hardening", () => {
+  it("approve() itself refuses the recommender and a case not in Approval", async () => {
+    setup("approver")
+    const { approve: approveCase } = await import("@/mock")
+    update((s) => {
+      findApp(s, "APP-2043")!.recommendation!.by = "Teresa Lim"
+    })
+    expect(await approveCase("APP-2043")).toMatchObject({ ok: false })
+    expect(await approveCase("APP-2041")).toMatchObject({ ok: false })
+    expect(findApp(getState(), "APP-2043")!.stage).toBe("Approval")
+  })
+
+  it("a recommended decline asks for confirmation before declining", async () => {
+    setup("officer")
+    await recommend("APP-2041", { decision: "decline", amount: null, tenor: 24, reason: "Risk higher than the score suggests", note: "" })
+    expect(findApp(getState(), "APP-2041")!.recommendation!.amount).toBe(findApp(getState(), "APP-2041")!.amount)
+    setSessionRole("approver")
+    expect(await startApproval("APP-2041")).toMatchObject({ ok: true, next: "confirm-decline" })
+    expect(findApp(getState(), "APP-2041")!.stage).toBe("Approval")
+    const { confirmDecline } = await import("@/mock")
+    expect(await confirmDecline("APP-2041")).toMatchObject({ ok: true, toast: "Declined. Borrower notified." })
+    expect(findApp(getState(), "APP-2041")!.stage).toBe("Declined")
+  })
+
+  it("actions refuse to run without a session", async () => {
+    setup(null)
+    expect(await pickCase("APP-2058")).toMatchObject({ ok: false, error: "Your session has ended. Sign in again." })
+  })
+})

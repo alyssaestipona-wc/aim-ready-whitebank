@@ -83,6 +83,7 @@ export function policyOf(s: StaffState): DecisionPolicy {
     bureauDown: s.cfg.bureauDown,
     ruleSetVersion: s.cfg.ruleset.pub,
     modelVersion: MODEL_VERSION,
+    bankName: "Kalinaw",
   }
 }
 

@@ -88,7 +88,6 @@ New `packages/ui` dependencies:
 - `radix-ui`;
 - `lucide-react`;
 - `tw-animate-css`;
-- `react-hook-form`, `zod` and `@hookform/resolvers`, for the shared `Form` field wrapper;
 - devDependencies `vitest`, `jsdom`, `@testing-library/react`, `@testing-library/jest-dom` and `@vitejs/plugin-react`, for component tests. These are the same versions `apps/web` uses.
 
 All are already used or prescribed by the repo's frontend conventions. Using Radix Toast instead of `sonner` avoids one extra package.

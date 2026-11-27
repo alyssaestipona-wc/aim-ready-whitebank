@@ -104,7 +104,7 @@ function ApplyForm({ borrower }: { borrower: Borrower }) {
   return (
     <div>
       <PageTitle title="Apply for a loan" back={step === 1 ? "/" : undefined} />
-      <div className="-mt-1 mb-3.5 text-xs text-muted-foreground">Step {step} of 3 · saved automatically, resume within 30 days</div>
+      <div className="-mt-1 mb-3.5 text-xs text-muted-foreground">Step {step} of 3</div>
       <form noValidate onSubmit={(e) => e.preventDefault()} onChange={() => error && setError("")}>
         {step === 1 && (
           <>
@@ -150,7 +150,7 @@ function ApplyForm({ borrower }: { borrower: Borrower }) {
               <div data-testid="estimate" className="text-2xl leading-[1.1] font-semibold tracking-[-0.03em] text-strong tabular-nums">
                 {formatPeso(estimateMonthly(v.product, amountC, v.tenor), { decimals: 2 })}
               </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">Indicative, calculated by Kalinaw core banking. Your final rate depends on your application.</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">Indicative, calculated by Kalinaw core banking (simulated). Your final rate depends on your application.</div>
             </BwCard>
           </>
         )}

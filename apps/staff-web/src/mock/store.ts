@@ -12,7 +12,7 @@ import { useSyncExternalStore } from "react"
 import { seed } from "./seed"
 import type { StaffState } from "./types"
 
-export const STORAGE_KEY = "wbl-staff-v2"
+export const STORAGE_KEY = "wbl-staff-v1"
 
 let state: StaffState | null = null
 const listeners = new Set<() => void>()

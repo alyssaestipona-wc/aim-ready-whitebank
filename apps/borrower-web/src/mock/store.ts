@@ -4,7 +4,7 @@ import { seed } from "./seed"
 import type { BorrowerState } from "./types"
 
 /** Bump when the stored shape changes so old browser data reseeds. */
-export const STORAGE_KEY = "wbl-borrower-v2"
+export const STORAGE_KEY = "wbl-borrower-v1"
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">
 

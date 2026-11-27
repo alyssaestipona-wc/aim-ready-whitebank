@@ -137,7 +137,7 @@ Each app has the same layout under `src/mock/`:
 
 | File | Holds |
 |------|-------|
-| `seed.ts` | Ported from `seed`, `extendSeed`, `enrichHist` and the other seed builders. Every record has `tenantId: "whitebank"`. |
+| `seed.ts` | Ported from `seed`, `extendSeed`, `enrichHist` and the other seed builders. Every record has `tenantId: "kalinaw"`. |
 | `types.ts` | The shapes of the mock records. |
 | `store.ts` | Below. |
 | `actions.ts` | One function per prototype action. |
@@ -145,7 +145,7 @@ Each app has the same layout under `src/mock/`:
 
 `store.ts` is a tiny external store:
 - `useSyncExternalStore`;
-- localStorage key `wbl-staff-v2` / `wbl-borrower-v2`, with every access in try/catch;
+- localStorage key `wbl-staff-v1` / `wbl-borrower-v1`, with every access in try/catch;
 - an in-memory fallback.
 
 `actions.ts` covers actions such as `recommend`, `approve`, `book`, `checkBooking`, `retryBooking`, `requestInfo`, `publishRuleSet` and `applyForLoan`. Each validates, mutates, appends history and returns `{ ok } | { error }`.

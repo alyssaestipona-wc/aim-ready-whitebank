@@ -27,7 +27,7 @@ export function resetAll() {
 export async function signInAs(who: "juan" | "carmela") {
   const email = who === "juan" ? "juan.delacruz@email.com" : "carmela.bautista@email.com"
   await act(async () => {
-    await actions.signIn(email, "whitebank2026")
+    await actions.signIn(email, "kalinaw2026")
   })
 }
 

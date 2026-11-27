@@ -27,7 +27,7 @@ export default function ApplicationsPage() {
       <PageHeader
         eyebrow="Applications"
         title="All applications"
-        description="From WhiteBank online, branches and email or file intake. Every channel uses the same decision pipeline."
+        description="From Kalinaw Bank online, branches and email or file intake. Every channel uses the same decision pipeline."
         actions={r === "branch" || r === "officer" ? <NewAppButton /> : undefined}
       />
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>

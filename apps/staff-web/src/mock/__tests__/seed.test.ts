@@ -42,8 +42,8 @@ describe("seed", () => {
   })
 
   it("puts a tenant ID on every record", () => {
-    expect(s.tenantId).toBe("whitebank")
-    expect(s.apps.every((a) => a.tenantId === "whitebank")).toBe(true)
+    expect(s.tenantId).toBe("kalinaw")
+    expect(s.apps.every((a) => a.tenantId === "kalinaw")).toBe(true)
   })
 
   it("stores money as integer centavos", () => {

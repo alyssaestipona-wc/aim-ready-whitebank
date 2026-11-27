@@ -13,21 +13,21 @@ The console SHALL ask for email and password first. It SHALL show the authentica
 
 #### Scenario: Wrong password
 - **GIVEN** the sign-in page
-- **WHEN** `approver@whitebank.ph` is entered with a wrong password and the user selects Continue
+- **WHEN** `approver@kalinawbank.ph` is entered with a wrong password and the user selects Continue
 - **THEN** a red inline error "Email or password is incorrect." is shown and no code field appears
 
 #### Scenario: Correct credentials reveal the code step
 - **GIVEN** the sign-in page at the email and password step
-- **WHEN** `approver@whitebank.ph` and the demo password are submitted
+- **WHEN** `approver@kalinawbank.ph` and the demo password are submitted
 - **THEN** the email is shown with a Change link, an "Authentication code" field appears, and the button reads "Verify and sign in"
 
 #### Scenario: Invalid code
-- **GIVEN** the code step after valid credentials for `approver@whitebank.ph`
+- **GIVEN** the code step after valid credentials for `approver@kalinawbank.ph`
 - **WHEN** a code that is not six digits is submitted
 - **THEN** a red inline error "That code is incorrect. Try again." is shown
 
 #### Scenario: Successful sign-in lands on the role's home screen
-- **GIVEN** the code step for `approver@whitebank.ph`
+- **GIVEN** the code step for `approver@kalinawbank.ph`
 - **WHEN** the approver completes the code step
 - **THEN** the approver lands on Approvals, and each other role lands on its own home screen (branch and loan officer: Work queues; loan operations and supervisor: Booking; credit risk: Decisioning dashboard; compliance: Audit log; administrator: Products)
 

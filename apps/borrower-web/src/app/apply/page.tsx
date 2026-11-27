@@ -12,7 +12,7 @@ import { actions, estimateMonthly, plainStatus, PRODUCTS, PURPOSES, TENOR_CHOICE
 import { applySchema, type ApplyValues } from "@/mock/schemas"
 
 const CONSENTS = [
-  ["consentCredit", "I allow WhiteBank to check my credit history with a credit bureau."],
+  ["consentCredit", "I allow Kalinaw Bank to check my credit history with a credit bureau."],
   ["consentData", "I agree to the processing of my personal data under the Data Privacy Act."],
   ["consentTerms", "I accept the loan terms and conditions (version 3.2)."],
 ] as const
@@ -150,7 +150,7 @@ function ApplyForm({ borrower }: { borrower: Borrower }) {
               <div data-testid="estimate" className="text-2xl leading-[1.1] font-semibold tracking-[-0.03em] text-strong tabular-nums">
                 {formatPeso(estimateMonthly(v.product, amountC, v.tenor), { decimals: 2 })}
               </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">Indicative, calculated by WhiteBank core banking. Your final rate depends on your application.</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">Indicative, calculated by Kalinaw core banking. Your final rate depends on your application.</div>
             </BwCard>
           </>
         )}

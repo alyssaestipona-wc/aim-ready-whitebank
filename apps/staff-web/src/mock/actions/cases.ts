@@ -223,7 +223,7 @@ export function checklist(a: Application): Array<[string, boolean, string]> {
     ["Approvals complete", !!a.offer, a.offer ? `${peso(a.offer.amount)} / ${a.offer.tenor} months` : "No approved offer"],
     ["Documents signed", !!a.signed, a.signed ? "Agreement, note signed · disclosure acknowledged" : "Signatures outstanding"],
     ["KYC valid within 12 months", true, "Refreshed at application"],
-    ["Disbursement account verified", true, "Borrower’s own WhiteBank account"],
+    ["Disbursement account verified", true, "Borrower’s own Kalinaw account"],
   ]
 }
 
@@ -244,7 +244,7 @@ function bookIt(s: StaffState, a: Application): void {
   a.stage = "Disbursed"
   a.sla = null
   if (a.booking) a.booking.status = "booked"
-  a.disbTo = `WhiteBank Savings ••${String(1000 + s.seq).slice(-4)}`
+  a.disbTo = `Kalinaw Savings ••${String(1000 + s.seq).slice(-4)}`
   a.disbAt = now(s)
 }
 

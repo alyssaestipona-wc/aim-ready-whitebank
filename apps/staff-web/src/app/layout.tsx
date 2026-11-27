@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "WhiteBank Lending Console",
-  description: "WhiteBank staff lending console (simulated data).",
+  description: "Kalinaw Bank staff lending console (simulated data).",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

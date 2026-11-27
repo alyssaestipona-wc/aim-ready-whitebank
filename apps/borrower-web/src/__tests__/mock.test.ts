@@ -21,7 +21,7 @@ beforeEach(() => {
 describe("store", () => {
   it("persists across store re-creation", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     const again = createStore(h.storage)
     expect(again.getState().apps).toHaveLength(1)
@@ -31,10 +31,10 @@ describe("store", () => {
 
   it("resets to the seed", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     h.store.reset()
-    expect(h.store.getState()).toMatchObject({ apps: [], session: null, seq: 1300, tenantId: "whitebank" })
+    expect(h.store.getState()).toMatchObject({ apps: [], session: null, seq: 1300, tenantId: "kalinaw" })
   })
 
   it("falls back to memory when localStorage throws", () => {
@@ -57,10 +57,10 @@ describe("store", () => {
 
   it("puts the tenant id on every record", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
-    expect(h.store.getState().tenantId).toBe("whitebank")
-    expect(h.store.getState().apps.every((a) => a.tenantId === "whitebank")).toBe(true)
+    expect(h.store.getState().tenantId).toBe("kalinaw")
+    expect(h.store.getState().apps.every((a) => a.tenantId === "kalinaw")).toBe(true)
   })
 })
 
@@ -68,12 +68,12 @@ describe("sign in", () => {
   it("rejects a wrong password and an unknown email with the same message", async () => {
     const h = harness()
     expect(await h.actions.signIn("juan.delacruz@email.com", "nope")).toEqual({ ok: false, error: "Email or password is incorrect." })
-    expect(await h.actions.signIn("someone@email.com", "whitebank2026")).toEqual({ ok: false, error: "Email or password is incorrect." })
+    expect(await h.actions.signIn("someone@email.com", "kalinaw2026")).toEqual({ ok: false, error: "Email or password is incorrect." })
   })
 
   it("sets the session cookie", async () => {
     const h = harness()
-    await h.actions.signIn(" Juan.DelaCruz@email.com ", "whitebank2026")
+    await h.actions.signIn(" Juan.DelaCruz@email.com ", "kalinaw2026")
     expect(document.cookie).toContain("wbl_borrower_session=juan")
     await h.actions.signOut()
     expect(document.cookie).not.toContain("wbl_borrower_session=juan")
@@ -83,7 +83,7 @@ describe("sign in", () => {
 describe("application", () => {
   it("auto-approves Juan's ₱150,000 / 24 months and records the decision", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     const r = await h.actions.submitApplication(form())
     expect(r).toEqual({ ok: true, id: "APP-4301" })
     const a = myApp(h.store.getState())!
@@ -103,7 +103,7 @@ describe("application", () => {
 
   it("requires every consent", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     const r = await h.actions.submitApplication(form({ consentCredit: false, consentData: false, consentTerms: false }))
     expect(r).toEqual({ ok: false, error: "Please tick the credit check consent, data processing consent, terms and conditions to submit." })
     expect(h.store.getState().apps).toHaveLength(0)
@@ -111,7 +111,7 @@ describe("application", () => {
 
   it("blocks a duplicate open application for the same product", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     const r = await h.actions.submitApplication(form())
     expect(r).toEqual({ ok: false, error: "You already have an open personal loan application (APP-4301). We’ll update you on that one first." })
@@ -120,7 +120,7 @@ describe("application", () => {
 
   it("keeps the decision record unchanged through accept, sign and release", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     const before = JSON.stringify(myApp(h.store.getState())!.decision)
     await h.actions.acceptOffer(true)
@@ -139,7 +139,7 @@ describe("application", () => {
 describe("simulated bank progression", () => {
   it("walks a referral through every bank step after about 4 seconds each", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form({ amount: toCentavos(250000) }))
     expect(myApp(h.store.getState())!.stage).toBe("Review")
 
@@ -178,7 +178,7 @@ describe("simulated bank progression", () => {
 
   it("catches up on load when a step fell due while closed", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     await h.actions.acceptOffer(true)
     const reopened = createStore(h.storage)
@@ -191,7 +191,7 @@ describe("simulated bank progression", () => {
 describe("borrower actions", () => {
   async function atInfoRequested() {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form({ amount: toCentavos(250000) }))
     h.tick(BANK_STEP_MS)
     h.actions.advanceBank()
@@ -208,14 +208,14 @@ describe("borrower actions", () => {
 
   it("needs the disclosure acknowledged to accept", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     expect(await h.actions.acceptOffer(false)).toEqual({ ok: false, error: "Acknowledge the disclosure statement first" })
   })
 
   it("needs the exact name and agreement to sign", async () => {
     const h = harness()
-    await h.actions.signIn("juan.delacruz@email.com", "whitebank2026")
+    await h.actions.signIn("juan.delacruz@email.com", "kalinaw2026")
     await h.actions.submitApplication(form())
     await h.actions.acceptOffer(true)
     h.tick(BANK_STEP_MS)

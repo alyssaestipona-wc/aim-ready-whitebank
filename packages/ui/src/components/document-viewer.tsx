@@ -139,7 +139,7 @@ function DocSignatures({
       </div>
       <div>
         <div className="flex h-[38px] items-end font-script text-2xl text-ink">{bankSigner ?? ""}</div>
-        <div className="border-t border-ink-4 pt-1 text-[11px] text-muted-foreground">For WhiteBank: {bankLine}</div>
+        <div className="border-t border-ink-4 pt-1 text-[11px] text-muted-foreground">For Kalinaw Bank: {bankLine}</div>
       </div>
     </div>
   )

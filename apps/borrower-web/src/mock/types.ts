@@ -5,7 +5,7 @@ import type { Centavos, DecisionRecord, Grade } from "@aim-ready/core"
  * identifier, even in this single-tenant Phase 1 deployment.
  */
 
-export type TenantId = "whitebank"
+export type TenantId = "kalinaw"
 
 export type ProductCode = "PL" | "SL"
 

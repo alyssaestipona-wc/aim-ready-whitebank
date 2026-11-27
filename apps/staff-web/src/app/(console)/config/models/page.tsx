@@ -12,7 +12,7 @@ type Tab = "registry" | "prohibited" | "shadow" | "monitoring" | "fairness" | "o
 type Ov = Pick<AuditEntry, "when" | "who" | "what" | "target">
 
 const REGISTRY: Array<[string, string, string, string, string, string, string]> = [
-  ["PL-Score 3.2", "Personal, salary", "Gradient boosted trees", "Live", "WhiteBank outcomes Jan 2023 – Jun 2026", "60+ DPD in 12 months", "Model risk committee, 2 Sep 2026"],
+  ["PL-Score 3.2", "Personal, salary", "Gradient boosted trees", "Live", "Kalinaw outcomes Jan 2023 – Jun 2026", "60+ DPD in 12 months", "Model risk committee, 2 Sep 2026"],
   ["SL-Score 1.1", "Salary", "Logistic scorecard", "Shadow mode", "Payroll-partner loans 2022 – 2026", "60+ DPD in 12 months", "Pending"],
   ["Cold-start scorecard 1.0", "New products", "Bureau score + expert rules", "Retired", "No loan history needed", "—", "Credit policy, 2025"],
 ]

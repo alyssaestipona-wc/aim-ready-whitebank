@@ -76,7 +76,7 @@ None. `web-bootstrap` and `api-bootstrap` requirements are unchanged.
   - `packages/core` gains code and a `vitest` devDependency for its unit tests. It gets no runtime dependencies.
 - **`packages/contracts`:** unchanged. No API contract changes.
 - **No database, migration or `apps/api` change.**
-- **ADR:** running the borrower channel as its own deployable app is an architectural decision. ADR-0002 anticipates more apps but names `apps/admin` and `apps/backoffice`, not these two. This change adds **[ADR-0003 "Separate staff and borrower web apps"](../../../docs/adr/0003-separate-staff-and-borrower-web-apps.md)**.
+- **ADR:** running the borrower channel as its own deployable app is an architectural decision. ADR-0002 anticipates more apps but names `apps/admin` and `apps/backoffice`, not these two. This change adds **[ADR-0003 "Separate staff and borrower web apps"](../../../../docs/adr/0003-separate-staff-and-borrower-web-apps.md)**.
 - **Roles affected (RBAC visibility).** The staff console shows six of the nine PRD roles plus the booking-checker split of loan operations:
   - branch officer;
   - loan officer/credit analyst;

@@ -200,7 +200,7 @@ function ApplyForm({ borrower }: { borrower: Borrower }) {
                   <Controller
                     control={form.control}
                     name={name}
-                    render={({ field }) => <Checkbox id={`ap-${name}`} checked={field.value} onCheckedChange={(c) => field.onChange(c === true)} />}
+                    render={({ field }) => <Checkbox id={`ap-${name}`} checked={field.value} aria-invalid={(!!error?.startsWith("Please tick") && !field.value) || undefined} onCheckedChange={(c) => field.onChange(c === true)} />}
                   />
                 }
               >

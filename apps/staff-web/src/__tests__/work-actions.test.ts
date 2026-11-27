@@ -339,6 +339,10 @@ describe("default-deny on every case action", () => {
     ["intake submit by compliance", "compliance", async (m: typeof import("@/mock")) => m.submitIntakeDraft(0, { amount: 5000000, tenor: 12, govId: "PSN-1", consent: true })],
     ["assisted draft by an approver", "approver", async (m: typeof import("@/mock")) => m.saveAssistedDraft({ ...m.blankAssisted(), name: "X" }, null)],
     ["resend with nothing sent", "ops", async (m: typeof import("@/mock")) => m.resendSignature(getState().apps.find((a) => a.stage === "Documentation" && a.borrowerPending !== "sign")!.id)],
+    ["submitAssisted over a live case", "branch", async (m: typeof import("@/mock")) => m.submitAssisted({ ...m.blankAssisted(), name: "Rico Manalo", age: "29", amount: 10000000, income: 4200000, c1: true, c2: true, c3: true }, "APP-2041")],
+    ["saveAssistedDraft over a live case", "branch", async (m: typeof import("@/mock")) => m.saveAssistedDraft({ ...m.blankAssisted(), name: "X" }, "APP-2041")],
+    ["submitAssisted with an empty name", "branch", async (m: typeof import("@/mock")) => m.submitAssisted({ ...m.blankAssisted(), age: "29", amount: 10000000, income: 4200000, c1: true, c2: true, c3: true }, null)],
+    ["intake submit twice", "officer", async (m: typeof import("@/mock")) => m.submitIntakeDraft(getState().drafts.findIndex((d) => d.status === "Submitted"), { amount: 5000000, tenor: 12, govId: "PSN-1", consent: true })],
     ["generate docs twice", "ops", async (m: typeof import("@/mock")) => m.generateDocs(getState().apps.find((a) => a.stage === "Documentation" && a.borrowerPending === "sign")!.id)],
   ] as const)("refuses %s", async (_label, who, act) => {
     setup(who)

@@ -459,6 +459,7 @@ export async function saveAssistedDraft(n: AssistedDraft, draftId: string | null
   if (!n.name.trim()) return fail("Enter at least the customer’s name to save a draft.")
   return update((s) => {
     let a = draftId ? findApp(s, draftId) : undefined
+    if (draftId && a?.stage !== "Draft") return fail("That draft no longer exists.", true)
     if (!a) {
       s.seq += 1
       a = {
@@ -482,7 +483,9 @@ export async function saveAssistedDraft(n: AssistedDraft, draftId: string | null
 /** Runs the simulated pipeline on an assisted application and opens the case. */
 export async function submitAssisted(n: AssistedDraft, draftId: string | null): Promise<ActionResult> {
   if (!["branch", "officer"].includes(baseRole(role()) ?? "")) return fail("Your role can’t do this.", true)
+  if (Object.keys(validateAssisted(n)).length) return fail("Fix the highlighted fields", true)
   const s0 = getState()
+  if (draftId && findApp(s0, draftId)?.stage !== "Draft") return fail("That draft no longer exists.", true)
   const P = products(s0)[n.product]
   const dup = s0.apps.find((a) => a.name === n.name && a.product === n.product && a.id !== draftId && !["Disbursed", "Declined", "Withdrawn", "Draft"].includes(a.stage))
   if (dup) return fail(`${n.name} already has an open ${P.name} application (${dup.id})`, true)
@@ -545,6 +548,7 @@ export async function submitIntakeDraft(index: number, input: { amount: Centavos
   return update((s) => {
     const d = s.drafts[index]
     if (!d) return fail("That draft no longer exists.", true)
+    if (d.status !== "Draft") return fail("That draft was already submitted.", true)
     const P = products(s)[d.product as ProductCode]
     const amt = input.amount ?? Number.NaN
     if (!(amt >= P.min && amt <= P.max)) return fail(`Amount must be between ${peso(P.min)} and ${peso(P.max)}.`)

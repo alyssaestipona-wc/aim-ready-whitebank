@@ -244,6 +244,7 @@ export async function generateDocs(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     const no = refuse(a, ["Documentation"], ["ops"])
     if (no) return no
+    if (a.borrowerPending === "sign") return fail("Documents were already sent for signature.", true)
     a.borrowerPending = "sign"
     a.docs = a.docs.filter((d) => !/agreement|Promissory/i.test(d[0])).concat([["Loan agreement", "Sent for signature"], ["Promissory note", "Sent for signature"]])
     log(s, role(), a, "Generated loan agreement and promissory note from templates (v5, v2) and sent for e-signature")
@@ -255,6 +256,7 @@ export async function resendSignature(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     const no = refuse(a, ["Documentation"], ["ops"])
     if (no) return no
+    if (a.borrowerPending !== "sign") return fail("No signature request to resend.", true)
     log(s, role(), a, "Resent e-signature request")
     return ok("Reminder sent to the borrower")
   })

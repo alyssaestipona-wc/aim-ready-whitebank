@@ -333,10 +333,18 @@ describe("default-deny on every case action", () => {
     ["intake upload by compliance", "compliance", async (m: typeof import("@/mock")) => m.uploadPartnerSpreadsheet()],
     ["CIC generate by an officer", "officer", async (m: typeof import("@/mock")) => m.generateCic()],
     ["AML export by admin", "admin", async (m: typeof import("@/mock")) => m.exportAml(0)],
+    ["CIC fix by compliance", "compliance", async (m: typeof import("@/mock")) => m.fixCic()],
+    ["CIC submit by an officer", "officer", async (m: typeof import("@/mock")) => m.submitCic()],
+    ["email bundle by ops", "ops", async (m: typeof import("@/mock")) => m.uploadEmailBundle()],
+    ["intake submit by compliance", "compliance", async (m: typeof import("@/mock")) => m.submitIntakeDraft(0, { amount: 5000000, tenor: 12, govId: "PSN-1", consent: true })],
+    ["assisted draft by an approver", "approver", async (m: typeof import("@/mock")) => m.saveAssistedDraft({ ...m.blankAssisted(), name: "X" }, null)],
+    ["resend with nothing sent", "ops", async (m: typeof import("@/mock")) => m.resendSignature(getState().apps.find((a) => a.stage === "Documentation" && a.borrowerPending !== "sign")!.id)],
+    ["generate docs twice", "ops", async (m: typeof import("@/mock")) => m.generateDocs(getState().apps.find((a) => a.stage === "Documentation" && a.borrowerPending === "sign")!.id)],
   ] as const)("refuses %s", async (_label, who, act) => {
     setup(who)
-    const before = JSON.stringify(getState().apps)
+    const snap = () => JSON.stringify(getState())
+    const before = snap()
     expect(await act(await import("@/mock"))).toMatchObject(no)
-    expect(JSON.stringify(getState().apps)).toBe(before)
+    expect(snap()).toBe(before)
   })
 })

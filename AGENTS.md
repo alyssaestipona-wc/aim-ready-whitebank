@@ -2,6 +2,27 @@
 
 Spec-driven development rules for this repo. Read this before making any change.
 
+## Product
+
+Building **WhiteBank Lending**: a white-label loan origination, decisioning,
+and collections platform in front of WhiteBank's core banking system. Phase 1
+covers personal, salary, and home loans in the Philippines. Full PRD:
+https://claude.ai/artifact/TVUan7fBfNSkv6sy8UdX8q
+
+Full product context (roles, decision pipeline, adapter rules, data model
+constraints) lives in `openspec/config.yaml` under `context:` — every
+proposal is checked against it. The three guiding principles that govern
+every change:
+
+- **Configurability is the product** — credit policy, decision bands,
+  workflows, approval matrix, documents live in tenant config, never code.
+- **Clear line with core** — lending owns the application and decision; core
+  owns the booked loan account. Balances/schedules are always read live from
+  core, never duplicated.
+- **Compliance built in** — consent, audit trail, maker-checker, and model
+  governance ship as standard features of every relevant capability, not
+  follow-up work.
+
 ## Workflow (non-negotiable)
 
 Every change follows this loop, in order:

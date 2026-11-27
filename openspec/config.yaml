@@ -7,15 +7,57 @@ context: |
   Shared code lives in packages/ (core, contracts, base, ui) and must not depend on app code.
   Specs are stored flat at openspec/specs/<capability>/spec.md.
 
+  Product: WhiteBank Lending — white-label loan origination, decisioning, and
+  collections platform, sitting between customer channels and WhiteBank's core
+  banking system. Phase 1 scope: personal, salary, and home loans in the
+  Philippines, single-tenant deployment (tenant ID present on every record from
+  day one for Phase 2 multi-tenancy). Nine roles (branch officer, loan officer/
+  credit analyst, approver/credit committee, loan operations, collections,
+  credit risk manager, compliance/audit, tenant administrator, platform
+  operator [Phase 2]) share one app with RBAC-controlled visibility.
+
+  Guiding principles, binding on every proposal:
+  - P1 Configurability is the product: credit policy, approval matrix,
+    workflows, documents, decision bands are tenant configuration, never code.
+  - P2 Clear line with core: lending owns application + decision; core owns
+    the booked loan account. Balances/schedules/transactions are always read
+    live from core, never duplicated or cached as source of truth.
+  - P3 Compliance built in: consent, disclosures, audit trails, retention,
+    bureau submission, model governance, and access control are standard
+    configurable features, not bolted on later.
+
+  Decisioning is layered and must stay reproducible: data gathering (bureau,
+  KYC/AML/fraud, income, core) -> deterministic policy knockouts -> AI score
+  (risk grade, PD, terms, reason codes) -> per-product decision bands
+  (auto-approve/refer/auto-decline) -> immutable decision record (inputs,
+  rule version, model version, outcome).
+
+  External services (bureau, eKYC, AML/sanctions, fraud, e-signature, OCR,
+  SMS/email, income verification, appraisal, collateral registry, collection
+  agencies) are reached only through a reusable adapter/integration hub with
+  per-tenant provider selection, timeouts/retries, circuit breakers, and cost
+  tracking. Every adapter ships a simulated provider for development; no paid
+  provider accounts needed until a bank's go-live.
+
+  Full PRD: https://claude.ai/artifact/TVUan7fBfNSkv6sy8UdX8q
+
 rules:
   proposal:
     - State what is in scope and out of scope.
     - Name every capability touched and whether it is new or existing.
     - Call out any schema, API contract, or shared-package change explicitly.
+    - State which of the 9 roles the change affects and how RBAC visibility changes.
+    - If the change touches credit policy, decision bands, documents, or workflows, confirm it is expressed as tenant configuration, not hardcoded logic.
+    - If the change touches a loan account, balance, schedule, or transaction, confirm it reads from core live rather than duplicating or caching as source of truth.
+    - If the change touches an external service (bureau, eKYC, AML, fraud, e-signature, OCR, SMS/email, income, appraisal, collateral, collections), confirm it goes through the adapter/integration hub with a simulated provider, retries, and a fallback-to-human path on outage.
+    - If the change touches approvals, overrides, booking, disbursement, or configuration publishing, confirm maker-checker (second-user sign-off) is enforced.
+    - If the change touches scoring or decisioning, state whether it runs in shadow mode first and how it can be killed instantly.
   specs:
     - Keep one spec per capability at openspec/specs/<capability>/spec.md.
     - Every requirement must have at least one Scenario.
     - Specs describe behavior, not implementation detail.
+    - Every record touched by a spec includes a tenant identifier, even in this single-tenant Phase 1 deployment.
+    - Any decision-producing requirement must specify what gets stored immutably (inputs, rule version, model version, outcome) for 100% reproducibility.
   tasks:
     - Break tasks into reviewable, independently testable chunks.
     - Order tasks so earlier tasks unblock later ones.

@@ -121,7 +121,7 @@ export function ProductView({ code: raw }: { code: string }) {
                 ["Auto-approval limit", peso(p.autoLimit)],
                 ["Decision bands", `approve ${s.cfg.bands.approve}+, decline below ${s.cfg.bands.decline}`],
                 ["Automation", s.cfg.automation[code]],
-                ["Disbursement", "Borrower’s own Kalinaw account"],
+                ["Disbursement", "Borrower’s own WhiteBank account"],
               ]}
             />
           </Section>
@@ -195,7 +195,7 @@ export function ProductView({ code: raw }: { code: string }) {
           <Card className="mt-3.5 px-[18px] py-4">
             <h3 className="mb-2 text-base font-semibold">Eligibility rules</h3>
             <CheckRow label="Customer for at least 12 months" value="Required" />
-            <CheckRow label="Salary credited to Kalinaw for 6 of the last 6 months" value="Required" />
+            <CheckRow label="Salary credited to WhiteBank for 6 of the last 6 months" value="Required" />
             <CheckRow label="No 30+ day delinquency in 12 months (bureau)" value="Required" />
             <CheckRow label="Indicative amount" value="3× monthly salary, cap ₱300,000" />
           </Card>

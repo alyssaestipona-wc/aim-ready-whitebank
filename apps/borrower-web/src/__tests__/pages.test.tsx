@@ -55,7 +55,7 @@ describe("sign-in", () => {
   it("signs in and goes home", async () => {
     renderPage(<SignInPage />, "/sign-in")
     await userEvent.type(screen.getByLabelText("Email"), "juan.delacruz@email.com")
-    await userEvent.type(screen.getByLabelText("Password"), "kalinaw2026")
+    await userEvent.type(screen.getByLabelText("Password"), "whitebank2026")
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }))
     await waitFor(() => expect(nav.hard).toHaveBeenCalledWith("/"))
     expect(store.getState().session).toBe("juan")
@@ -63,7 +63,7 @@ describe("sign-in", () => {
 
   it("does not list demo accounts", () => {
     renderPage(<SignInPage />, "/sign-in")
-    expect(screen.queryByText(/carmela|kalinaw2026/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/carmela|whitebank2026/i)).not.toBeInTheDocument()
   })
 })
 
@@ -337,7 +337,7 @@ describe("account", () => {
     renderPage(<AccountPage />, "/account")
     expect(screen.getByText("juan.delacruz@email.com · CIF-0061420")).toBeInTheDocument()
     expect(screen.getByText("Northgate Energy Corp.")).toBeInTheDocument()
-    expect(screen.getByText("Kalinaw Savings ••4471")).toBeInTheDocument()
+    expect(screen.getByText("WhiteBank Savings ••4471")).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }))
     await waitFor(() => expect(nav.hard).toHaveBeenCalledWith("/sign-in"))
   })

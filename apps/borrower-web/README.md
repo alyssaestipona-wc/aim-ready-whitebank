@@ -1,6 +1,6 @@
 # borrower-web
 
-The Kalinaw Bank online loans app for borrowers: sign-in, the loan
+The WhiteBank online loans app for borrowers: sign-in, the loan
 application, status tracking, inbox, document upload, offer acceptance,
 e-signing and the loan view.
 
@@ -43,7 +43,7 @@ pnpm --filter borrower-web test
 
 ## Demo accounts
 
-The password for both accounts is `kalinaw2026`.
+The password for both accounts is `whitebank2026`.
 
 | Borrower | Email |
 | --- | --- |

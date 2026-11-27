@@ -3,15 +3,15 @@ import { toCentavos, type DecisionPolicy, type Grade } from "@aim-ready/core"
 import type { Borrower, Product, ProductCode, TenantId } from "./types"
 
 /*
- * Simulated tenant configuration (Kalinaw Bank). In production every value
+ * Simulated tenant configuration (WhiteBank). In production every value
  * here comes from tenant configuration served by apps/api; nothing in the
  * screens hardcodes it.
  */
 
-export const TENANT: TenantId = "kalinaw"
+export const TENANT: TenantId = "whitebank"
 
 /** Demo password for both seeded borrower accounts. */
-export const DEMO_PASSWORD = "kalinaw2026"
+export const DEMO_PASSWORD = "whitebank2026"
 
 /** Shown in every timestamp; the prototype is pinned to this day. */
 export const TODAY = "27 Nov"
@@ -70,7 +70,7 @@ export const BORROWERS: Record<string, Borrower> = {
     obligations: toCentavos(7500),
     balance: toCentavos(184200),
     bureau: "Full file",
-    account: "Kalinaw Savings ••4471",
+    account: "WhiteBank Savings ••4471",
     stable: true,
   },
   carmela: {
@@ -87,15 +87,15 @@ export const BORROWERS: Record<string, Borrower> = {
     obligations: toCentavos(21000),
     balance: toCentavos(96400),
     bureau: "Full file",
-    account: "Kalinaw Savings ••2083",
+    account: "WhiteBank Savings ••2083",
     stable: false,
   },
 }
 
 /** General bank messages in each borrower's inbox: [title, body, date]. */
 const BASE_MESSAGES: ReadonlyArray<readonly [string, string, string]> = [
-  ["Welcome to Kalinaw Bank online", "Your online access is ready. Keep your password private.", "3 Jan"],
-  ["Security reminder", "Kalinaw will never ask for your password or authentication code by phone, SMS or email.", "18 Feb"],
+  ["Welcome to WhiteBank online", "Your online access is ready. Keep your password private.", "3 Jan"],
+  ["Security reminder", "WhiteBank will never ask for your password or authentication code by phone, SMS or email.", "18 Feb"],
   ["New sign-in from a browser on macOS", "If this wasn’t you, change your password now.", "4 Mar"],
   ["Holy Week branch hours", "Branches close 2–4 April. Online banking stays available.", "28 Mar"],
   ["Updated terms and conditions (v3.2)", "Our loan terms were updated. Review them before your next application.", "1 Apr"],

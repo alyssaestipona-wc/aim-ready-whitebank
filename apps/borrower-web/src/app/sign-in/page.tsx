@@ -28,7 +28,7 @@ export default function SignInPage() {
   return (
     <div className="mx-auto mt-5 max-w-[420px] sm:mt-12 sm:rounded-3xl sm:border sm:border-border sm:bg-paper sm:p-7">
       <h2 className="text-2xl tracking-[-0.03em]">Welcome back</h2>
-      <p className="mt-1 mb-[22px] text-[13.5px] text-muted-foreground">Sign in to Kalinaw Bank online.</p>
+      <p className="mt-1 mb-[22px] text-[13.5px] text-muted-foreground">Sign in to WhiteBank online.</p>
       <form noValidate onSubmit={onSubmit} onChange={() => error && setError("")}>
         <div className="mb-3 grid gap-[5px]">
           <Label htmlFor="bw-email">Email</Label>

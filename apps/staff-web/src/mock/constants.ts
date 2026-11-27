@@ -7,23 +7,23 @@ import { toCentavos, type Grade } from "@aim-ready/core"
 
 import type { Product, ProductCode, RoleKey, StaffUser, Stage } from "./types"
 
-export const TENANT_ID = "kalinaw"
+export const TENANT_ID = "whitebank"
 
 /** Shared demo password for every seeded staff account (sample data only). */
-export const DEMO_PASSWORD = "kalinaw2026"
+export const DEMO_PASSWORD = "whitebank2026"
 
 /** The prototype's fixed "today". */
 export const TODAY = "27 Nov"
 
 export const USERS: Record<RoleKey, StaffUser> = {
-  branch: { id: "branch", email: "branchofficer@kalinawbank.ph", name: "Bea Santiago", init: "BS", title: "Branch officer", unit: "Makati Ayala branch", land: "queues" },
-  officer: { id: "officer", email: "loanofficer@kalinawbank.ph", name: "Miguel Ramos", init: "MR", title: "Loan officer", unit: "Consumer credit · Metro Manila", land: "queues" },
-  approver: { id: "approver", email: "approver@kalinawbank.ph", name: "Teresa Lim", init: "TL", title: "Approver", unit: "Authority ₱1,000,000 · grades A–C", land: "approvals", limit: toCentavos(1000000), grades: ["A", "B", "C"] },
-  ops: { id: "ops", email: "loanops@kalinawbank.ph", name: "Paolo Reyes", init: "PR", title: "Loan operations", unit: "Credit administration · maker", land: "booking" },
-  opssup: { id: "opssup", email: "opssupervisor@kalinawbank.ph", name: "Celine Uy", init: "CU", title: "Loan operations supervisor", unit: "Booking checker", land: "booking", base: "ops" },
-  risk: { id: "risk", email: "creditrisk@kalinawbank.ph", name: "Rafael Cruz", init: "RC", title: "Credit risk manager", unit: "Credit policy", land: "dash-decision" },
-  compliance: { id: "compliance", email: "compliance@kalinawbank.ph", name: "Nina Torres", init: "NT", title: "Compliance and audit", unit: "Read-only access", land: "audit" },
-  admin: { id: "admin", email: "admin@kalinawbank.ph", name: "Jonas Mercado", init: "JM", title: "Tenant administrator", unit: "Kalinaw Bank IT", land: "products" },
+  branch: { id: "branch", email: "branchofficer@whitebank.ph", name: "Bea Santiago", init: "BS", title: "Branch officer", unit: "Makati Ayala branch", land: "queues" },
+  officer: { id: "officer", email: "loanofficer@whitebank.ph", name: "Miguel Ramos", init: "MR", title: "Loan officer", unit: "Consumer credit · Metro Manila", land: "queues" },
+  approver: { id: "approver", email: "approver@whitebank.ph", name: "Teresa Lim", init: "TL", title: "Approver", unit: "Authority ₱1,000,000 · grades A–C", land: "approvals", limit: toCentavos(1000000), grades: ["A", "B", "C"] },
+  ops: { id: "ops", email: "loanops@whitebank.ph", name: "Paolo Reyes", init: "PR", title: "Loan operations", unit: "Credit administration · maker", land: "booking" },
+  opssup: { id: "opssup", email: "opssupervisor@whitebank.ph", name: "Celine Uy", init: "CU", title: "Loan operations supervisor", unit: "Booking checker", land: "booking", base: "ops" },
+  risk: { id: "risk", email: "creditrisk@whitebank.ph", name: "Rafael Cruz", init: "RC", title: "Credit risk manager", unit: "Credit policy", land: "dash-decision" },
+  compliance: { id: "compliance", email: "compliance@whitebank.ph", name: "Nina Torres", init: "NT", title: "Compliance and audit", unit: "Read-only access", land: "audit" },
+  admin: { id: "admin", email: "admin@whitebank.ph", name: "Jonas Mercado", init: "JM", title: "Tenant administrator", unit: "WhiteBank IT", land: "products" },
 }
 
 export const STAFF_ORDER: RoleKey[] = ["branch", "officer", "approver", "ops", "opssup", "risk", "compliance", "admin"]
@@ -44,7 +44,7 @@ export const STAGES: Stage[] = ["Submitted", "Checks", "Review", "Approval", "Of
 
 export const REASON_CODES = [
   "Verified income supports a higher amount",
-  "Strong deposit relationship with Kalinaw",
+  "Strong deposit relationship with WhiteBank",
   "Additional documents reduce risk",
   "Policy exception approved by credit policy",
   "Risk higher than the score suggests",

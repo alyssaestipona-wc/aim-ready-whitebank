@@ -30,15 +30,15 @@ export default function TenantPage() {
     <>
       <PageHeader eyebrow="Configuration" title="Tenant settings" description="One bank in Phase 1. Every bank-specific setting lives here as configuration, never code." />
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-        <Section title="Kalinaw Bank">
+        <Section title="WhiteBank">
           <KeyValues
             items={[
-              ["Tenant ID", <span key="t" className="mono">tnt_kalinaw</span>],
+              ["Tenant ID", <span key="t" className="mono">tnt_whitebank</span>],
               ["Deployment", "Dedicated, single bank"],
               ["Data residency", "Philippines (Manila region)"],
               ["Languages", "English, Filipino"],
               ["Currency and dates", "PHP · 27 Nov 2026"],
-              ["Branding", "Kalinaw logo"],
+              ["Branding", "WhiteBank logo"],
             ]}
           />
         </Section>

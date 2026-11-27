@@ -102,10 +102,10 @@ function Preview({ s, a, name, status, revealed }: { s: StaffState; a: Applicati
       return (
         <DocPaper title="Loan agreement" sub={`Template v5 · ${a.id}`} stamp={signed ? "Signed" : undefined}>
           <p>
-            This agreement is between <b>Kalinaw Bank</b> (the Lender) and <b>{a.name}</b> (the Borrower).
+            This agreement is between <b>WhiteBank</b> (the Lender) and <b>{a.name}</b> (the Borrower).
           </p>
           <p>
-            <b>1. Loan.</b> The Lender agrees to lend {p0(tm.principal)} ({prodName(a.product).toLowerCase()}), released to the Borrower’s own Kalinaw account net of a {p0(tm.fee)} processing fee.
+            <b>1. Loan.</b> The Lender agrees to lend {p0(tm.principal)} ({prodName(a.product).toLowerCase()}), released to the Borrower’s own WhiteBank account net of a {p0(tm.fee)} processing fee.
           </p>
           <p>
             <b>2. Repayment.</b> {tm.months} equal monthly payments of {p2(tm.monthlyPayment)}, starting one month after release. Effective interest rate {tm.effectiveRatePct.toFixed(2)}% a year.
@@ -123,7 +123,7 @@ function Preview({ s, a, name, status, revealed }: { s: StaffState; a: Applicati
       return (
         <DocPaper title="Promissory note" sub={`Template v2 · ${a.id}`} stamp={signed ? "Signed" : undefined}>
           <p>
-            For value received, I, <b>{a.name}</b>, promise to pay <b>Kalinaw Bank</b> the sum of <b>{p0(tm.principal)}</b> in {tm.months} monthly instalments of {p2(tm.monthlyPayment)}, under the loan agreement of the same reference.
+            For value received, I, <b>{a.name}</b>, promise to pay <b>WhiteBank</b> the sum of <b>{p0(tm.principal)}</b> in {tm.months} monthly instalments of {p2(tm.monthlyPayment)}, under the loan agreement of the same reference.
           </p>
           <p>If any instalment is not paid when due, the whole unpaid balance may become due at once, at the Lender’s option.</p>
           <Signatures a={a} signed={signed} />
@@ -133,7 +133,7 @@ function Preview({ s, a, name, status, revealed }: { s: StaffState; a: Applicati
       return (
         <DocPaper title="Disclosure statement" sub={`Truth in Lending Act · template v3 · ${a.id}`} stamp={signed ? "Acknowledged" : undefined}>
           <DisclosureRows terms={tm} />
-          <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by Kalinaw core banking.{signed ? " Acknowledged by the borrower before signing." : ""}</p>
+          <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by WhiteBank core banking.{signed ? " Acknowledged by the borrower before signing." : ""}</p>
         </DocPaper>
       )
     case "sheet":

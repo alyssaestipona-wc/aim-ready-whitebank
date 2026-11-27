@@ -28,9 +28,9 @@ export function Column({ className, ...props }: React.ComponentProps<"div">) {
 function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2.5 no-underline">
-      <i className="flex size-[30px] items-center justify-center rounded-md bg-ink text-[14px] font-bold text-white not-italic">K</i>
+      <i className="flex size-[30px] items-center justify-center rounded-md bg-ink text-[14px] font-bold text-white not-italic">W</i>
       <span>
-        <b className="block text-[14.5px] leading-tight font-semibold text-strong">Kalinaw Bank</b>
+        <b className="block text-[14.5px] leading-tight font-semibold text-strong">WhiteBank</b>
         <small className="hidden text-xs text-muted-foreground sm:block">Loans</small>
       </span>
     </Link>

@@ -19,7 +19,7 @@ export function documentMeta(name: string, status: string): DocumentMeta {
   return {
     file: fileOf(name),
     version: signed ? 2 : 1,
-    addedBy: /Signed|Acknowledged|Sent/.test(status) ? "Paolo Reyes" : "Kalinaw Bank",
+    addedBy: /Signed|Acknowledged|Sent/.test(status) ? "Paolo Reyes" : "WhiteBank",
     retainUntil: /agreement|note|Disclosure/i.test(name) ? "Closure + 10 years" : "Closure + 5 years",
     status,
     statusTone: /Verified|Signed|Acknowledged/.test(status) ? "ok" : "info",
@@ -44,10 +44,10 @@ export function DocumentPreview({ app: a, name, status }: { app: Application; na
     return (
       <DocPaper title="Loan agreement" sub={`Template v5 · ${a.id}`} stamp={signed ? "Signed" : undefined}>
         <p>
-          This agreement is between <b>Kalinaw Bank</b> (the Lender) and <b>{a.name}</b> (the Borrower).
+          This agreement is between <b>WhiteBank</b> (the Lender) and <b>{a.name}</b> (the Borrower).
         </p>
         <p>
-          <b>1. Loan.</b> The Lender agrees to lend {formatPeso(tm.principal)} ({productName(a.product).toLowerCase()}), released to the Borrower’s own Kalinaw account net of a {formatPeso(tm.fee)} processing fee.
+          <b>1. Loan.</b> The Lender agrees to lend {formatPeso(tm.principal)} ({productName(a.product).toLowerCase()}), released to the Borrower’s own WhiteBank account net of a {formatPeso(tm.fee)} processing fee.
         </p>
         <p>
           <b>2. Repayment.</b> {tm.months} equal monthly payments of {formatPeso(tm.monthlyPayment, { decimals: 2 })}, starting one month after release. Effective interest rate {tm.effectiveRatePct.toFixed(2)}% a year.
@@ -65,7 +65,7 @@ export function DocumentPreview({ app: a, name, status }: { app: Application; na
     return (
       <DocPaper title="Promissory note" sub={`Template v2 · ${a.id}`} stamp={signed ? "Signed" : undefined}>
         <p>
-          For value received, I, <b>{a.name}</b>, promise to pay <b>Kalinaw Bank</b> the sum of <b>{formatPeso(tm.principal)}</b> in {tm.months} monthly instalments of{" "}
+          For value received, I, <b>{a.name}</b>, promise to pay <b>WhiteBank</b> the sum of <b>{formatPeso(tm.principal)}</b> in {tm.months} monthly instalments of{" "}
           {formatPeso(tm.monthlyPayment, { decimals: 2 })}, under the loan agreement of the same reference.
         </p>
         <p>If any instalment is not paid when due, the whole unpaid balance may become due at once, at the Lender’s option.</p>
@@ -88,7 +88,7 @@ export function DocumentPreview({ app: a, name, status }: { app: Application; na
             { label: "Late payment penalty", value: "3% of amount due per month" },
           ]}
         />
-        <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by Kalinaw core banking.{signed ? " Acknowledged by the borrower before signing." : ""}</p>
+        <p className="mt-3 mb-0 text-[11px] text-muted-foreground">Figures calculated by WhiteBank core banking.{signed ? " Acknowledged by the borrower before signing." : ""}</p>
       </DocPaper>
     )
   return (

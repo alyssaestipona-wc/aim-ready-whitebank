@@ -1,6 +1,6 @@
 # staff-web
 
-The WhiteBank Lending staff console for Kalinaw Bank: sign-in, work queues,
+The WhiteBank Lending staff console for WhiteBank: sign-in, work queues,
 case review, approvals, maker-checker booking, reports, compliance views and
 tenant configuration.
 
@@ -37,16 +37,16 @@ pnpm --filter staff-web test
 
 ## Demo accounts
 
-The password for every account is `kalinaw2026`. The authentication code is
+The password for every account is `whitebank2026`. The authentication code is
 any six digits.
 
 | Role | Email |
 | --- | --- |
-| Branch officer | `branchofficer@kalinawbank.ph` |
-| Loan officer | `loanofficer@kalinawbank.ph` |
-| Approver | `approver@kalinawbank.ph` |
-| Loan operations (maker) | `loanops@kalinawbank.ph` |
-| Loan operations supervisor (checker) | `opssupervisor@kalinawbank.ph` |
-| Credit risk manager | `creditrisk@kalinawbank.ph` |
-| Compliance and audit (read-only) | `compliance@kalinawbank.ph` |
-| Tenant administrator | `admin@kalinawbank.ph` |
+| Branch officer | `branchofficer@whitebank.ph` |
+| Loan officer | `loanofficer@whitebank.ph` |
+| Approver | `approver@whitebank.ph` |
+| Loan operations (maker) | `loanops@whitebank.ph` |
+| Loan operations supervisor (checker) | `opssupervisor@whitebank.ph` |
+| Credit risk manager | `creditrisk@whitebank.ph` |
+| Compliance and audit (read-only) | `compliance@whitebank.ph` |
+| Tenant administrator | `admin@whitebank.ph` |

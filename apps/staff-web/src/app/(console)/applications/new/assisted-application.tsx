@@ -112,7 +112,7 @@ export function AssistedApplication() {
         </Link>{" "}
         / New assisted application
       </div>
-      <PageHeader eyebrow="Applications" title="New assisted application" description="For walk-in customers. Same form rules, consents and decision pipeline as Kalinaw Bank online." />
+      <PageHeader eyebrow="Applications" title="New assisted application" description="For walk-in customers. Same form rules, consents and decision pipeline as WhiteBank online." />
       <Split
         main={
           <>

@@ -156,7 +156,7 @@ function namedCases(): Application[] {
       bureau: { provider: "CIBI (simulated)", file: "Full file", score: 690, lines: 2, util: "30%", delinq: "None" }, core: { since: 2025, balance: 8400, inflow: "₱52,000 monthly", loans: "None" }, checks: stdChecks(),
       docs: [["Payslip (Oct 2026)", "Verified"]],
       recommendation: { by: "Miguel Ramos", decision: "approve", amount: 120000, tenor: 24, reason: null, overLevel: null, note: "Matches the AI recommendation; payroll deduction offsets the short tenure." },
-      hist: [H("Liza Ferrer", "Submitted application in Kalinaw Bank online", "26 Nov, 11:30"), H("System", "Referred: score 684 in referral band", "26 Nov, 11:31"), H("Miguel Ramos", "Recommended approval ₱120,000 / 24 months", `${T}, 08:05`)],
+      hist: [H("Liza Ferrer", "Submitted application in WhiteBank online", "26 Nov, 11:30"), H("System", "Referred: score 684 in referral band", "26 Nov, 11:31"), H("Miguel Ramos", "Recommended approval ₱120,000 / 24 months", `${T}, 08:05`)],
     }),
     mk({
       id: "APP-2047", name: "Dennis Yap", product: "PL", amount: 60000, tenor: 12, channel: "Branch", branch: "Makati Ayala", stage: "Draft", created: `${T}, 09:50`, sla: null,
@@ -176,7 +176,7 @@ function namedCases(): Application[] {
     mk({
       id: "APP-2052", name: "Grace Medina", product: "SL", amount: 70000, tenor: 12, channel: "Web app", stage: "Booking", created: "26 Nov, 09:00", sla: 1,
       age: 33, cif: "CIF-0047710", employer: "Cordillera Foods (payroll partner)", income: 40000, verified: 40000, obligations: 2000,
-      outcome: "approve", score: 733, grade: "B", pd: 1.8, trigger: "", reasons: [{ t: "Stable salary credits to a Kalinaw account", pos: true }], rules: [], bureau: { provider: "TransUnion PH", file: "Full file", score: 729, lines: 3, util: "18%", delinq: "None" }, core: { since: 2021, balance: 9900, inflow: "₱40,000 monthly", loans: "None" }, checks: stdChecks(),
+      outcome: "approve", score: 733, grade: "B", pd: 1.8, trigger: "", reasons: [{ t: "Stable salary credits to a WhiteBank account", pos: true }], rules: [], bureau: { provider: "TransUnion PH", file: "Full file", score: 729, lines: 3, util: "18%", delinq: "None" }, core: { since: 2021, balance: 9900, inflow: "₱40,000 monthly", loans: "None" }, checks: stdChecks(),
       docs: [["Loan agreement", "Signed"], ["Disclosure statement", "Acknowledged"], ["Promissory note", "Signed"]], offer: { amount: 70000, tenor: 12, grade: "B" }, signed: true,
       booking: { status: "failed", maker: "Paolo Reyes", checker: "Celine Uy", key: "bk-APP-2052-7f2a", error: "Core banking timeout after 30s (POST /loans). No account was created.", attempts: 1 },
       hist: [H("System", "Auto-approved: score 733 (B) · rule set v4", "26 Nov, 09:01"), H("Grace Medina", "Accepted offer and e-signed loan documents", "26 Nov, 12:10"), H("Paolo Reyes", "Submitted booking for checker (idempotency key bk-APP-2052-7f2a)", "26 Nov, 15:50"), H("Celine Uy", "Approved booking as checker (maker: Paolo Reyes)", "26 Nov, 16:00"), H("System", "Booking failed: core banking timeout. Moved to booking exceptions.", "26 Nov, 16:01")],
@@ -197,7 +197,7 @@ function namedCases(): Application[] {
       rules: [{ id: "dti", name: "Debt-to-income at or below 40%", res: "w", val: "43%" }, { id: "sanctions", name: "No sanctions or watchlist match", res: "p", val: "Clear" }, { id: "limit", name: "Amount within auto-approval limit", res: "w", val: "limit ₱200,000" }],
       bureau: { provider: "CIBI (simulated)", file: "Full file", score: 671, lines: 5, util: "64%", delinq: "None" }, core: { since: 2021, balance: 15800, inflow: "₱70,000 monthly", loans: "Credit card, current" }, checks: stdChecks(),
       docs: [["Payslip (Oct 2026)", "Verified"]], recDefault: 180000, recNote: "Debt-to-income at 43%; ₱180,000 brings it back under the cap.",
-      hist: [H("Joy Castillo", "Submitted application in Kalinaw Bank online", "26 Nov, 16:10"), H("System", "Referred: debt-to-income 43% above 40% cap; amount above auto-approval limit", "26 Nov, 16:11"), H("System", "Assigned to Miguel Ramos (round robin)", "26 Nov, 16:11")],
+      hist: [H("Joy Castillo", "Submitted application in WhiteBank online", "26 Nov, 16:10"), H("System", "Referred: debt-to-income 43% above 40% cap; amount above auto-approval limit", "26 Nov, 16:11"), H("System", "Assigned to Miguel Ramos (round robin)", "26 Nov, 16:11")],
     }),
     mk({
       id: "APP-2058", name: "Henry Tan", product: "PL", amount: 420000, tenor: 36, channel: "Web app", stage: "Review", created: `${T}, 07:20`, sla: 7,
@@ -342,7 +342,7 @@ function extendSeed(apps: Application[]): void {
     const h = (who: string, what: string) => a.hist.push(H(who, what, created))
     h(
       channel === "Branch" ? (bo as string) : channel === "File intake" ? "Andrea Lim" : nm,
-      channel === "Branch" ? `Captured assisted application at ${a.branch} branch` : channel === "File intake" ? "Submitted from partner spreadsheet after staff review" : "Submitted application in Kalinaw Bank online"
+      channel === "Branch" ? `Captured assisted application at ${a.branch} branch` : channel === "File intake" ? "Submitted from partner spreadsheet after staff review" : "Submitted application in WhiteBank online"
     )
     h("System", d.outcome === "approve" ? `Auto-approved: score ${d.score} (${d.grade}) · rule set v4` : d.outcome === "refer" ? `Referred: ${d.trigger}` : `Auto-declined: ${a.trigger}`)
     if (owner) h("System", `Assigned to ${owner} (round robin)`)
@@ -375,7 +375,7 @@ function extendSeed(apps: Application[]): void {
     if (stage === "Disbursed") {
       a.loanNo = `LN-2026-${loanSeq++}`
       a.booking = { status: "booked", maker: "Paolo Reyes", checker: "Celine Uy", key: `bk-${id}`, attempts: 1 }
-      a.disbTo = `Kalinaw Savings ••${between(1000, 9999)}`
+      a.disbTo = `WhiteBank Savings ••${between(1000, 9999)}`
       a.disbAt = created
       h("Celine Uy", "Approved booking as checker (maker: Paolo Reyes)")
       h("System", `Core created loan account ${a.loanNo}; disbursed ${peso((a.offer as { amount: number }).amount)}`)
@@ -455,7 +455,7 @@ function seedCic(): StaffState["cicHist"] {
   m.forEach((mo, i) => {
     const mm = `0${10 - i}`.slice(-2)
     const next = m[i - 1] || "Nov"
-    out.push([`CIC_KALINAW_2026${mm}.txt`, `${mo} 2026`, (recs - i * 2760).toLocaleString("en-PH"), 0, `Submitted ${4 + (i % 3)} ${next}`])
+    out.push([`CIC_WHITEBANK_2026${mm}.txt`, `${mo} 2026`, (recs - i * 2760).toLocaleString("en-PH"), 0, `Submitted ${4 + (i % 3)} ${next}`])
     if (i % 3 === 0) out.push([`BSP_FRP_CONSUMER_2026${mm}.xlsx`, `${mo} 2026`, "—", 0, `Submitted 10 ${next}`])
   })
   return out

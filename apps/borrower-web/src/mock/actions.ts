@@ -73,7 +73,7 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
     const salaryPesos = b?.id === "carmela" ? 98500 : Math.round(((a.income / 100) * 1.03) / 100) * 100
     const supported = Math.floor((salaryPesos * 2.7) / 10000) * 10000 * 100
     a.recDefault = Math.max(PRODUCTS[a.product].min, Math.min(a.amount, supported))
-    log(s, a, "Uploaded bank statements in Kalinaw Bank online", a.name)
+    log(s, a, "Uploaded bank statements in WhiteBank online", a.name)
     log(s, a, `Bank statement analysis: credits ${formatPeso(salaryPesos * 100)} monthly; obligations ${formatPeso(a.obligations)}; recommended ${formatPeso(a.recDefault)}`, "System")
     a.waitingSince = now()
   }
@@ -115,7 +115,7 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
           const b = BORROWERS[a.borrower]
           a.loanNo = `LN-2026-${s.seq}`
           a.stage = "Disbursed"
-          a.disbTo = b ? b.account : "your Kalinaw account"
+          a.disbTo = b ? b.account : "your WhiteBank account"
           log(s, a, `Core created loan account ${a.loanNo}; disbursed ${formatPeso(a.offer?.amount ?? a.amount)} to ${a.disbTo} ${SIMULATED_STEP}`, "System")
         } else {
           moved--
@@ -232,7 +232,7 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
           withdrawReason: null,
           waitingSince: decision.outcome === "refer" ? now() : null,
         }
-        log(s, a, "Submitted application in Kalinaw Bank online; three consents recorded (terms v3.2)", b.name)
+        log(s, a, "Submitted application in WhiteBank online; three consents recorded (terms v3.2)", b.name)
         const d = decision
         log(
           s,

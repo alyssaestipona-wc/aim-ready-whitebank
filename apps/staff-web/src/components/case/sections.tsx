@@ -136,7 +136,7 @@ export function CoreCard({ a }: { a: Application }) {
   if (!c) {
     return (
       <Section title="Relationship">
-        <p className="m-0 text-muted-foreground">New to bank: no deposit or loan history with Kalinaw.</p>
+        <p className="m-0 text-muted-foreground">New to bank: no deposit or loan history with WhiteBank.</p>
       </Section>
     )
   }

@@ -29,7 +29,7 @@ const nextVersion = (v: string) => `v${Number(v.slice(1)) + 1}`
 export async function generateCic(): Promise<ActionResult> {
   if (role() === "compliance") return fail("Read-only access", true)
   return update((s) => {
-    s.cic = [["CIC_KALINAW_202611.txt", "Nov 2026", "218,400", 2, "Ready"]]
+    s.cic = [["CIC_WHITEBANK_202611.txt", "Nov 2026", "218,400", 2, "Ready"]]
     log(s, role(), null, "Generated CIC submission file for Nov 2026: 2 validation errors (missing TIN on 2 records)")
     return ok("File generated: 2 validation errors to fix", "warn")
   })

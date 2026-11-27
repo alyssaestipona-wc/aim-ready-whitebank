@@ -40,7 +40,7 @@ export default function UploadPage() {
     <div>
       <PageTitle title="Upload documents" back="/" />
       <Note>
-        <b>From Kalinaw Bank:</b> {a.infoMsg || "Please upload the requested documents."}
+        <b>From WhiteBank:</b> {a.infoMsg || "Please upload the requested documents."}
       </Note>
       <form noValidate onSubmit={onSubmit}>
         <div className="mb-3 grid gap-[5px]">

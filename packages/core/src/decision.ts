@@ -125,7 +125,7 @@ export function scoreOf(x: DecisionInput): number {
 function reasonsOf(x: DecisionInput, autoLimit: Centavos): Reason[] {
   const r: Reason[] = [];
   const years = x.years || 0;
-  if (x.stable) r.push({ t: "Stable salary credits to a Kalinaw account", pos: true });
+  if (x.stable) r.push({ t: "Stable salary credits to a WhiteBank account", pos: true });
   if (years >= 3) r.push({ t: `Customer for ${years} years`, pos: true });
   if (x.bureau === "Full file") r.push({ t: "Established credit bureau history", pos: true });
   if (x.bureau === "Thin file") r.push({ t: "Thin bureau file: 1 trade line", pos: false });

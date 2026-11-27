@@ -19,13 +19,13 @@ describe("staff sign-in", () => {
     setup(null, "/sign-in")
     render(<SignInPage />)
     expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument()
-    expect(screen.queryByText(/approver@kalinawbank\.ph/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/approver@whitebankbank\.ph/)).not.toBeInTheDocument()
   })
 
   it("rejects a wrong password with a red inline error and no code field", async () => {
     setup(null, "/sign-in")
     render(<SignInPage />)
-    await credentials("approver@kalinawbank.ph", "wrong")
+    await credentials("approver@whitebank.ph", "wrong")
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent("Email or password is incorrect.")
     expect(alert).toHaveClass("text-danger")
@@ -35,9 +35,9 @@ describe("staff sign-in", () => {
   it("reveals the code step only after valid credentials", async () => {
     setup(null, "/sign-in")
     render(<SignInPage />)
-    await credentials("approver@kalinawbank.ph", "kalinaw2026")
+    await credentials("approver@whitebank.ph", "whitebank2026")
     expect(screen.getByLabelText("Authentication code")).toBeInTheDocument()
-    expect(screen.getByText("approver@kalinawbank.ph")).toBeInTheDocument()
+    expect(screen.getByText("approver@whitebank.ph")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Verify and sign in" })).toBeInTheDocument()
   })
@@ -45,7 +45,7 @@ describe("staff sign-in", () => {
   it("rejects a code that is not six digits", async () => {
     setup(null, "/sign-in")
     render(<SignInPage />)
-    await credentials("approver@kalinawbank.ph", "kalinaw2026")
+    await credentials("approver@whitebank.ph", "whitebank2026")
     await userEvent.type(screen.getByLabelText("Authentication code"), "12a")
     await userEvent.click(screen.getByRole("button", { name: "Verify and sign in" }))
     expect(screen.getByRole("alert")).toHaveTextContent("That code is incorrect. Try again.")
@@ -58,7 +58,7 @@ describe("staff sign-in", () => {
   it.each(LANDINGS)("%s lands on %s and the sign-in is audited", async (role, path) => {
     setup(null, "/sign-in")
     render(<SignInPage />)
-    await credentials(USERS[role].email, "kalinaw2026")
+    await credentials(USERS[role].email, "whitebank2026")
     await userEvent.type(screen.getByLabelText("Authentication code"), "123456")
     await userEvent.click(screen.getByRole("button", { name: "Verify and sign in" }))
     expect(getSessionRole()).toBe(role)

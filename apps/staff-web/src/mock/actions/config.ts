@@ -84,7 +84,10 @@ export async function createProductDraft(code: ProductCode): Promise<ActionResul
   })
 }
 
-/** Edits the open draft (no audit entry, as the prototype). */
+/**
+ * Edits the open draft field by field as the user types. Not audited per
+ * keystroke, as in the prototype; submit, publish and discard are audited.
+ */
 export async function setProductDraftField(field: "max" | "autoLimit", value: number | null): Promise<ActionResult> {
   if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {

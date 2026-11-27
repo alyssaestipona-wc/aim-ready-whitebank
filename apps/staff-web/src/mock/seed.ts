@@ -7,7 +7,7 @@
  */
 import { formatPeso, simulateDecision, toCentavos, type DecisionInput, type Grade, type Outcome } from "@aim-ready/core"
 
-import { BASE_PRODUCTS, BRANCH_OF, STAFF_POOL, TENANT_ID, TODAY, USERS } from "./constants"
+import { BANK_NAME, BASE_PRODUCTS, BRANCH_OF, STAFF_POOL, TENANT_ID, TODAY, USERS } from "./constants"
 import type { Application, AuditEntry, Channel, DecisionConfig, HistEntry, IntakeDraft, ProductCode, Stage, StaffState } from "./types"
 
 export const RULESET_VERSION = "v4"
@@ -70,7 +70,7 @@ function seedPolicy(cfg: DecisionConfig) {
     bureauDown: cfg.bureauDown,
     ruleSetVersion: cfg.ruleset.pub,
     modelVersion: MODEL_VERSION,
-    bankName: "Kalinaw",
+    bankName: BANK_NAME,
   }
 }
 

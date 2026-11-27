@@ -333,7 +333,7 @@ export function ActionsCard({ s, a, role }: { s: StaffState; a: Application; rol
       {dialog === "disclosure" && (
         <ConfirmDialog open onOpenChange={(o) => !o && setDialog(null)} title="Disclosure statement (Truth in Lending)" description="Generated from the approved terms. The borrower acknowledges it before signing." okLabel="Close" noCancel onConfirm={() => undefined}>
           <DisclosureRows terms={termsOf(s, a)} />
-          <p className="mt-3 mb-0 text-[12.5px] text-muted-foreground">Every figure is calculated by WhiteBank core banking (simulated in this prototype).</p>
+          <p className="mt-3 mb-0 text-[12.5px] text-muted-foreground">Every figure is calculated by Kalinaw core banking (simulated in this prototype).</p>
         </ConfirmDialog>
       )}
       {dialog === "check" && a.offer && (

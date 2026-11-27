@@ -5,7 +5,7 @@
  */
 import { disclosure, formatPeso, type Centavos, type DecisionPolicy, type Disclosure, type Grade } from "@aim-ready/core"
 
-import { BASE_PRODUCTS, GRADE_RATE, TODAY, USERS } from "./constants"
+import { BANK_NAME, BASE_PRODUCTS, GRADE_RATE, TODAY, USERS } from "./constants"
 import { H, MODEL_VERSION, roleOf } from "./seed"
 import type { Application, BaseRole, Product, ProductCode, RoleKey, StaffState, StaffUser } from "./types"
 
@@ -83,7 +83,7 @@ export function policyOf(s: StaffState): DecisionPolicy {
     bureauDown: s.cfg.bureauDown,
     ruleSetVersion: s.cfg.ruleset.pub,
     modelVersion: MODEL_VERSION,
-    bankName: "Kalinaw",
+    bankName: BANK_NAME,
   }
 }
 

@@ -280,3 +280,38 @@ describe("code review hardening", () => {
     expect(await pickCase("APP-2058")).toMatchObject({ ok: false, error: "Your session has ended. Sign in again." })
   })
 })
+
+describe("unauthorized decisions", () => {
+  it("approve() refuses a non-approver and amounts above authority", async () => {
+    const { approve: approveCase } = await import("@/mock")
+    setup("officer")
+    expect(await approveCase("APP-2043")).toMatchObject({ ok: false, error: "Only an approver can approve." })
+    setSessionRole("approver")
+    update((s) => {
+      findApp(s, "APP-2043")!.recommendation!.amount = 120000000
+    })
+    expect(await approveCase("APP-2043")).toMatchObject({ ok: false, error: "Above your authority. Route it to credit committee." })
+  })
+
+  it("declines need an approver who did not recommend, at the Approval stage", async () => {
+    const { confirmDecline, declineCase } = await import("@/mock")
+    setup("officer")
+    expect(await declineCase("APP-2043", "x")).toMatchObject({ ok: false, error: "Only an approver can decline." })
+    setSessionRole("approver")
+    expect(await declineCase("APP-2041", "x")).toMatchObject({ ok: false, error: "Nothing to decline." })
+    update((s) => {
+      const a = findApp(s, "APP-2043")!
+      a.recommendation!.by = "Teresa Lim"
+      a.recommendation!.decision = "decline"
+    })
+    expect(await declineCase("APP-2043", "x")).toMatchObject({ ok: false, error: "You recommended this case. A different approver must decide it." })
+    expect(await confirmDecline("APP-2043")).toMatchObject({ ok: false, error: "You recommended this case. A different approver must decide it." })
+    setSessionRole("ops")
+    expect(await confirmDecline("APP-2043")).toMatchObject({ ok: false, error: "Only an approver can decline." })
+  })
+
+  it("only loan operations can retry a failed booking", async () => {
+    setup("compliance")
+    expect(await retryBooking("APP-2052")).toMatchObject({ ok: false, error: "Only loan operations can retry a booking." })
+  })
+})

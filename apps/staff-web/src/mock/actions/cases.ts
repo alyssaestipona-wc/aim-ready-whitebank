@@ -9,7 +9,7 @@
 import { simulateDecision, type Centavos, type DecisionInput, type DecisionRecord } from "@aim-ready/core"
 
 import { CUSTOMERS, OVERRIDE_THRESHOLD, USERS } from "../constants"
-import { findApp, log, me, now, peso, policyOf, products, termsOf } from "../engine"
+import { baseRole, findApp, log, me, now, peso, policyOf, products, termsOf } from "../engine"
 import { MODEL_VERSION } from "../seed"
 import { getSessionRole } from "../session"
 import { getState, update } from "../store"
@@ -143,6 +143,7 @@ export async function confirmDecline(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     const rc = a.recommendation
     if (!rc || rc.decision !== "decline" || a.stage !== "Approval") return fail("Nothing to decline.", true)
+    if (role() !== "approver") return fail("Only an approver can decline.", true)
     if (rc.by === me(role()).name) return fail("You recommended this case. A different approver must decide it.", true)
     // The automated outcome stays as decided; the human decline is the stage.
     a.stage = "Declined"
@@ -189,6 +190,9 @@ export async function returnToOfficer(id: string): Promise<ActionResult> {
 
 export async function declineCase(id: string, reason: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    if (a.stage !== "Approval") return fail("Nothing to decline.", true)
+    if (role() !== "approver") return fail("Only an approver can decline.", true)
+    if (a.recommendation?.by === me(role()).name) return fail("You recommended this case. A different approver must decide it.", true)
     a.stage = "Declined"
     a.sla = null
     a.declineReason = reason
@@ -307,6 +311,7 @@ export async function checkBooking(id: string): Promise<ActionResult> {
 export async function retryBooking(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     if (!a.booking || !a.offer || a.booking.status !== "failed") return fail("Nothing to retry.", true)
+    if (baseRole(role()) !== "ops") return fail("Only loan operations can retry a booking.", true)
     a.booking.attempts += 1
     bookIt(s, a)
     log(s, role(), a, `Retried booking with the same idempotency key ${a.booking.key}`)

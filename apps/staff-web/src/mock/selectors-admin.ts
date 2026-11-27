@@ -4,7 +4,7 @@
  */
 import { simulateDecision, toCentavos, type DecisionPolicy, type Outcome, type PolicyRule } from "@aim-ready/core"
 
-import { STAFF_ORDER, TENANT_ID, USERS } from "./constants"
+import { BANK_NAME, STAFF_ORDER, TENANT_ID, USERS } from "./constants"
 import { products } from "./engine"
 import { MODEL_VERSION } from "./seed"
 import type { AuditEntry, StaffState, TriggerKey } from "./types"
@@ -29,7 +29,7 @@ export function harness(s: StaffState, rules: PolicyRule[], bands: { approve: nu
   const p = products(s)
   const policy: DecisionPolicy = {
     rules, bands, triggers: triggers || s.cfg.triggers, autoLimits: { PL: p.PL.autoLimit, SL: p.SL.autoLimit }, automation: { PL: "live", SL: "live" },
-    killSwitch: false, bureauDown: false, ruleSetVersion: s.cfg.ruleset.pub, modelVersion: MODEL_VERSION, bankName: "Kalinaw",
+    killSwitch: false, bureauDown: false, ruleSetVersion: s.cfg.ruleset.pub, modelVersion: MODEL_VERSION, bankName: BANK_NAME,
   }
   const out: Record<Outcome, number> = { approve: 0, refer: 0, decline: 0 }
   for (let i = 0; i < 1240; i++) {

@@ -392,16 +392,24 @@ function DtiInput({ value, onCommit }: { value: number; onCommit: (v: number) =>
   const n = text.trim() === "" ? Number.NaN : Number(text)
   const bad = !Number.isFinite(n) || n <= 0 || n > 100
   return (
-    <Input
-      aria-label="Debt-to-income cap"
-      type="number"
-      className="w-[76px] px-2 py-1"
-      value={text}
-      aria-invalid={bad || undefined}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => {
-        if (!bad) onCommit(n)
-      }}
-    />
+    <>
+      <Input
+        aria-label="Debt-to-income cap"
+        type="number"
+        className="w-[76px] px-2 py-1"
+        value={text}
+        aria-invalid={bad || undefined}
+        aria-describedby={bad ? "dti-err" : undefined}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          if (!bad) onCommit(n)
+        }}
+      />
+      {bad && (
+        <span id="dti-err" role="alert" className="ml-2 text-xs font-medium text-danger">
+          Enter a debt-to-income cap between 1 and 100%.
+        </span>
+      )}
+    </>
   )
 }

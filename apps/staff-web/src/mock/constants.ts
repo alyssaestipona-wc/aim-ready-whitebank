@@ -9,6 +9,9 @@ import type { Product, ProductCode, RoleKey, StaffUser, Stage } from "./types"
 
 export const TENANT_ID = "kalinaw"
 
+/** The tenant bank's display name (used in decision reasons and documents). */
+export const BANK_NAME = "Kalinaw"
+
 /** Shared demo password for every seeded staff account (sample data only). */
 export const DEMO_PASSWORD = "kalinaw2026"
 

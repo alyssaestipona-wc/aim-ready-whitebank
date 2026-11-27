@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterList, paginate, rangeText } from "../list";
+import { filterList, paginate, rangeText } from "../lib/list";
 
 const rows = Array.from({ length: 45 }, (_, i) => ({ id: i + 1, name: i % 2 ? "Odd case" : "Even case", stage: i < 10 ? "Review" : "Offer" }));
 

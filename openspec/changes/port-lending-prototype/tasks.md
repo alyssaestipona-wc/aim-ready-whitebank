@@ -24,7 +24,7 @@ steps run from the repo root unless stated.
 - [x] 2.1 Add `vitest` and a `test` script to `packages/core`. Verify `pnpm --filter @aim-ready/core test` runs.
 - [x] 2.2 Implement `toCentavos`, `fromCentavos` and `formatPeso`. Add unit tests for rounding, zero, negative input being rejected, and output with and without decimals. Verify the tests pass.
 - [x] 2.3 Implement `monthlyPayment`, `effectiveRate` and `disclosure`, with TSDoc formulas and rounding rules. Add unit tests that match the prototype's `terms()`/`eir()` figures to the centavo for PL 150,000/24/C and SL 80,000/12/B, plus an invalid-input test (zero or negative term). Verify the tests pass.
-- [x] 2.4 Implement `filterList` and `paginate`. Add unit tests for range text, the last partial page, an empty result and an out-of-range page clamp. Verify the tests pass.
+- [x] 2.4 Implement `filterList` and `paginate` (moved to `packages/ui/src/lib/list.ts` during apply, see design D3). Add unit tests for range text, the last partial page, an empty result and an out-of-range page clamp. Verify the tests pass.
 - [x] 2.5 Port `simulateDecision(input, policy)` from `decide` and `scoreOf`. Add unit tests for:
   - a knockout decline;
   - auto-approve at 700 or above;
@@ -40,25 +40,25 @@ steps run from the repo root unless stated.
 
 ## 3. packages/ui: tokens and primitives (spec: ui-kit)
 
-- [ ] 3.1 Add the `packages/ui` dependencies from design D3, subpath `exports`, a `cn` helper, and Vitest with jsdom and Testing Library. Verify `pnpm install` succeeds and `pnpm --filter @aim-ready/ui lint` passes.
-- [ ] 3.2 Create `src/styles/theme.css` with the prototype tokens:
+- [x] 3.1 Add the `packages/ui` dependencies from design D3, subpath `exports`, a `cn` helper, and Vitest with jsdom and Testing Library. Verify `pnpm install` succeeds and `pnpm --filter @aim-ready/ui lint` passes.
+- [x] 3.2 Create `src/styles/theme.css` with the prototype tokens:
   - ink, the gray ramp, accent `#2B59C3` and danger `#C42B1C`;
   - borders, radius and shadows;
   - fonts;
   - the shadcn variable mapping.
 
   Import it in both apps' `globals.css` with `@source` pointing at the package. Verify a test page in each app renders accent and danger utilities with the expected computed colours.
-- [ ] 3.3 Generate the shadcn primitives listed in design D3 into `packages/ui` in the `radix-nova` style and restyle them to the tokens. Verify each is exported and that `pnpm --filter staff-web build` compiles an import of each.
-- [ ] 3.4 Build `ListView` (search, filters, Clear, table, empty state, pager). Add tests for page change, the filter resetting to page 1, the "Showing A–B of N" text and the empty-state Clear. Verify the tests pass.
-- [ ] 3.5 Build `money-input-format.ts` and `MoneyInput` inside `packages/ui`, with no import from `@aim-ready/core`. Add tests for:
+- [x] 3.3 Generate the shadcn primitives listed in design D3 into `packages/ui` in the `radix-nova` style and restyle them to the tokens. Verify each is exported and that `pnpm --filter staff-web build` compiles an import of each.
+- [x] 3.4 Build `ListView` (search, filters, Clear, table, empty state, pager). Add tests for page change, the filter resetting to page 1, the "Showing A–B of N" text and the empty-state Clear. Verify the tests pass.
+- [x] 3.5 Build `money-input-format.ts` and `MoneyInput` inside `packages/ui`, with no import from `@aim-ready/core`. Add tests for:
   - "1234567.891" → "1,234,567.89";
   - "5000" on blur → "5,000.00";
   - "abc12.345" → "12.34";
   - leading zeros, a lone ".", and caret retention.
 
   Verify the tests pass and that `grep -r "@aim-ready/core" packages/ui` finds nothing.
-- [ ] 3.6 Build `ConfirmDialog` (title, description, body, red inline error, danger confirm) and a Toast provider. Add tests that a failing confirm keeps the dialog open with the error, and that Escape closes both the dialog and the dropdown menu with focus returned. Verify the tests pass.
-- [ ] 3.7 Build `DocumentViewer` (ID card, sheet and agreement kinds, with metadata row), `AppStrip`, `Avatar`, `StatusPill` (accent and neutral only), `EmptyState`, `PageHeader` and `BarChart` (accent bars). Add render tests for each kind and pill variant, and a test that the mono utility applies the Geist Mono font variable. Verify no component uses `style=` or a hex literal (grep check in the test script).
+- [x] 3.6 Build `ConfirmDialog` (title, description, body, red inline error, danger confirm) and a Toast provider. Add tests that a failing confirm keeps the dialog open with the error, and that Escape closes both the dialog and the dropdown menu with focus returned. Verify the tests pass.
+- [x] 3.7 Build `DocumentViewer` (ID card, sheet and agreement kinds, with metadata row), `AppStrip`, `Avatar`, `StatusPill` (accent and neutral only), `EmptyState`, `PageHeader` and `BarChart` (accent bars). Add render tests for each kind and pill variant, and a test that the mono utility applies the Geist Mono font variable. Verify no component uses `style=` or a hex literal (grep check in the test script).
 
 ## 4. staff-web: mock layer, sign-in, access control and shell (spec: staff-console sign-in, routes, shell, simulated state)
 

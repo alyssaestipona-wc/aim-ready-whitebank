@@ -1,0 +1,194 @@
+/*
+ * WhiteBank Lending design tokens, shared by every app that uses the kit.
+ *
+ * Palette: near-black ink and zinc grays on white, ONE blue accent ("brand")
+ * for emphasis, informational states and every chart bar, and red ("danger")
+ * reserved for inline errors and destructive confirmations. Success and
+ * warning states use the accent or neutrals, never green or orange.
+ *
+ * Each app's globals.css imports tailwindcss, tw-animate-css and this file,
+ * then adds an @source for packages/ui/src so kit classes are generated.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ink and grays */
+  --ink: #0b0b0c;
+  --ink-2: #18181b;
+  --ink-3: #27272a;
+  --ink-4: #3f3f46;
+  --g-600: #52525b;
+  --g-500: #71717a;
+  --g-400: #a1a1aa;
+  --g-300: #d4d4d8;
+  --g-200: #e4e4e7;
+  --g-150: #ececee;
+  --g-100: #f4f4f5;
+  --g-50: #fafafa;
+  --paper: #ffffff;
+
+  /* the single accent */
+  --brand: #2b59c3;
+  --brand-700: #1e4497;
+  --brand-100: #dce4f6;
+  --brand-50: #eff3fb;
+  --brand-soft: #a9beeb;
+  --brand-on-ink: #8faef0;
+
+  /* inline errors and destructive actions only */
+  --danger: #c42b1c;
+  --danger-bg: #fdf2f1;
+  --danger-line: #f1c5c0;
+
+  /* text */
+  --text: #3f3f46;
+  --strong: #0b0b0c;
+  --subtle: #a1a1aa;
+  --border-soft: #f0f0f2;
+  --border-strong: #d4d4d8;
+
+  /* shadcn semantic mapping */
+  --background: var(--g-50);
+  --foreground: var(--text);
+  --card: var(--paper);
+  --card-foreground: var(--text);
+  --popover: var(--paper);
+  --popover-foreground: var(--text);
+  --primary: var(--ink);
+  --primary-foreground: #ffffff;
+  --secondary: var(--g-100);
+  --secondary-foreground: var(--strong);
+  --muted: var(--g-100);
+  --muted-foreground: var(--g-500);
+  --accent: var(--g-50);
+  --accent-foreground: var(--strong);
+  --destructive: var(--danger);
+  --border: var(--g-200);
+  --input: var(--border-strong);
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --radius: 0.5rem;
+
+  --pop-shadow: 0 18px 48px -16px rgb(11 11 12 / 0.28), 0 4px 12px -6px rgb(11 11 12 / 0.12);
+  color-scheme: light;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-heading: var(--font-sans);
+  --font-script: "Snell Roundhand", "Segoe Script", "Brush Script MT", cursive;
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-g-600: var(--g-600);
+  --color-g-500: var(--g-500);
+  --color-g-400: var(--g-400);
+  --color-g-300: var(--g-300);
+  --color-g-200: var(--g-200);
+  --color-g-150: var(--g-150);
+  --color-g-100: var(--g-100);
+  --color-g-50: var(--g-50);
+  --color-paper: var(--paper);
+  --color-brand: var(--brand);
+  --color-brand-700: var(--brand-700);
+  --color-brand-100: var(--brand-100);
+  --color-brand-50: var(--brand-50);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-on-ink: var(--brand-on-ink);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-line: var(--danger-line);
+  --color-text: var(--text);
+  --color-strong: var(--strong);
+  --color-subtle: var(--subtle);
+  --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+
+  --radius-xs: 6px;
+  --radius-sm: 7px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-3xl: 16px;
+
+  --shadow-pop: var(--pop-shadow);
+  --text-2xs: 10.5px;
+  --text-xs: 11.5px;
+  --text-sm: 13px;
+  --text-base: 14px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    @apply bg-background font-sans text-text antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply m-0 font-semibold tracking-[-0.015em] text-strong;
+  }
+  a {
+    @apply text-brand-700;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+}
+
+@utility mono {
+  font-family: var(--font-mono);
+  font-size: 0.93em;
+  letter-spacing: -0.01em;
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--g-500);
+}

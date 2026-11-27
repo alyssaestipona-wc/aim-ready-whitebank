@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  transpilePackages: ["@aim-ready/ui", "@aim-ready/core"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

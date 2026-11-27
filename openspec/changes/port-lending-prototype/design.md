@@ -61,11 +61,12 @@ Fonts load with `next/font/google` (Geist and Geist Mono) in each root layout. T
 
 ### D3. shadcn primitives generated into `packages/ui`
 The shadcn CLI generates these primitives into `packages/ui/src/components/ui`, in the `radix-nova` style that `apps/web` uses:
-- button, input, label, textarea, select, checkbox;
+- button, input, label, textarea, native-select, checkbox;
 - dialog, dropdown-menu, popover;
 - table, tabs, badge, card, separator;
-- toast (Radix Toast from the `radix-ui` package);
-- tooltip.
+- toast (Radix Toast from the `radix-ui` package).
+
+The prototype uses native selects and `title` hints, so the Radix select and tooltip are not used.
 
 Composites go in `packages/ui/src/components`:
 - `ListView` (search, filters, table, pager);
@@ -76,11 +77,12 @@ Composites go in `packages/ui/src/components`:
 - `StatusPill`;
 - `EmptyState`;
 - `ConfirmDialog`;
+- `lib/list.ts`: `filterList`, `paginate` and `rangeText`, which back `ListView` and every pager. Like the money-input formatter, they are UI behaviour kept in `packages/ui` because ADR-0002 forbids `packages/ui` from depending on `packages/core`;
 - `money-input-format.ts`: the live text formatter with caret-safe digit counting and two-decimals-on-blur. It is kept inside `packages/ui`, because ADR-0002 forbids `packages/ui` from depending on `packages/core`;
 - `PageHeader`;
 - `BarChart`, made of CSS bars in the accent colour.
 
-The package exposes subpath `exports`, for example `@aim-ready/ui/button`.
+The package exposes one barrel (`@aim-ready/ui`) plus `@aim-ready/ui/theme.css`. Both apps list it in `transpilePackages`.
 
 New `packages/ui` dependencies:
 - `radix-ui`;
@@ -91,7 +93,7 @@ New `packages/ui` dependencies:
 
 All are already used or prescribed by the repo's frontend conventions. Using Radix Toast instead of `sonner` avoids one extra package.
 
-The kit uses `clsx` + `tailwind-merge`, already declared, rather than the `cn` package that `apps/web` uses, so the kit owns its own `cn`.
+The kit uses the same `cn` package as `apps/web`, which the shadcn `radix-nova` generator imports. It replaces the previously declared `clsx` + `tailwind-merge`.
 
 Alternative considered: per-app `components/ui`. Rejected by the non-negotiable that shared UI lives in `packages/ui`.
 
@@ -111,8 +113,6 @@ Seed amounts are stored as integer centavos.
 - `disclosure(...)`: fee, net proceeds, total of payments and finance charge.
 
 The formulas are documented in TSDoc, as AGENTS requires.
-
-**Lists:** `filterList`, `paginate` (returns rows plus range plus page count).
 
 **Simulated decisioning:** `simulateDecision(input, policy)`, ported from `decide` and `scoreOf`. It runs knockouts, then score, then bands, and returns:
 - outcome;

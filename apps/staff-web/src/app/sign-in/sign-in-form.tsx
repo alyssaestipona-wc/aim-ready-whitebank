@@ -60,7 +60,7 @@ export function SignInForm() {
         </div>
         <div className="mb-3 grid gap-[5px]">
           <Label htmlFor="si-code">Authentication code</Label>
-          <Input id="si-code" inputMode="numeric" maxLength={6} autoComplete="one-time-code" autoFocus {...code.register("code")} />
+          <Input id="si-code" inputMode="numeric" maxLength={6} autoComplete="one-time-code" autoFocus aria-invalid={!!error || undefined} {...code.register("code")} />
           <span className="text-xs text-muted-foreground">Enter the six digits from your registered device.</span>
         </div>
         {errorNote}
@@ -75,11 +75,11 @@ export function SignInForm() {
     <form onSubmit={onCredentials} noValidate>
       <div className="mb-3 grid gap-[5px]">
         <Label htmlFor="si-email">Email</Label>
-        <Input id="si-email" type="email" autoComplete="username" {...creds.register("email")} />
+        <Input id="si-email" type="email" autoComplete="username" aria-invalid={!!error || undefined} {...creds.register("email")} />
       </div>
       <div className="mb-3 grid gap-[5px]">
         <Label htmlFor="si-pw">Password</Label>
-        <Input id="si-pw" type="password" autoComplete="current-password" {...creds.register("password")} />
+        <Input id="si-pw" type="password" autoComplete="current-password" aria-invalid={!!error || undefined} {...creds.register("password")} />
       </div>
       {errorNote}
       <Button type="submit" variant="primary" wide className="py-2.5">

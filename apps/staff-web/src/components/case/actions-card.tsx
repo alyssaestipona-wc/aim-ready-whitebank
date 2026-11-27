@@ -21,8 +21,10 @@ import {
   isReadOnly,
   me,
   overrideLevel,
+  getState,
   peso,
   pickCase,
+  products,
   recommend,
   recommendedMonthly,
   requestInfo,
@@ -354,6 +356,8 @@ function RequestInfoDialog({ a, onClose, report }: { a: Application; onClose: ()
   const [picked, setPicked] = React.useState<Record<string, boolean>>({ ri1: true })
   const [msg, setMsg] = React.useState(`Hi ${a.name.split(" ")[0]}, to finish reviewing your loan please upload your last 3 months of bank statements.`)
   const [due, setDue] = React.useState("In 3 days (30 Nov)")
+  const [tried, setTried] = React.useState(false)
+  const noneBad = tried && !INFO_ITEMS.some(([k]) => picked[k])
   return (
     <ConfirmDialog
       open
@@ -361,11 +365,14 @@ function RequestInfoDialog({ a, onClose, report }: { a: Application; onClose: ()
       title="Request information from the borrower"
       description="The request appears in the borrower’s online inbox and on their status tracker."
       okLabel="Send request"
-      onConfirm={async () => report(await requestInfo(a.id, { items: INFO_ITEMS.filter(([k]) => picked[k]).map(([, , v]) => v), message: msg, due }))}
+      onConfirm={async () => {
+        setTried(true)
+        return report(await requestInfo(a.id, { items: INFO_ITEMS.filter(([k]) => picked[k]).map(([, , v]) => v), message: msg, due }))
+      }}
     >
       {INFO_ITEMS.map(([k, label]) => (
         <div key={k} className="flex items-start gap-2.5 py-1.5 text-sm">
-          <Checkbox id={k} checked={!!picked[k]} onCheckedChange={(c) => setPicked((p) => ({ ...p, [k]: c === true }))} />
+          <Checkbox id={k} checked={!!picked[k]} aria-invalid={noneBad || undefined} onCheckedChange={(c) => setPicked((p) => ({ ...p, [k]: c === true }))} />
           <Label htmlFor={k} className="font-normal">
             {label}
           </Label>
@@ -396,6 +403,11 @@ function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () =
   const [note, setNote] = React.useState(a.recNote || `Recommend ${peso(ai.amount)} in line with the AI recommendation.`)
   const amtC = amount == null ? Number.NaN : toCentavos(amount)
   const ov = overrideLevel(a, decision, amtC, Number(tenor))
+  const [tried, setTried] = React.useState(false)
+  const P = products(getState())[a.product]
+  const amountBad = tried && decision !== "decline" && !(amtC >= P.min && amtC <= P.max)
+  const tenorBad = tried && decision !== "decline" && !(Number(tenor) >= P.tmin && Number(tenor) <= P.tmax)
+  const reasonBad = tried && ov.differs && !reason
   return (
     <ConfirmDialog
       open
@@ -403,7 +415,10 @@ function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () =
       title="Recommend a decision"
       description={`AI recommends ${ai.decision} ${peso(ai.amount)} over ${ai.tenor} months. Anything different needs a reason code; ₱50,000 or more away also needs a second approver.`}
       okLabel="Send to approver"
-      onConfirm={async () => report(await recommend(a.id, { decision, amount: amount == null ? null : amtC, tenor: Number(tenor), reason, note }))}
+      onConfirm={async () => {
+        setTried(true)
+        return report(await recommend(a.id, { decision, amount: amount == null ? null : amtC, tenor: Number(tenor), reason, note }))
+      }}
     >
       <Field id="rd" label="Recommendation">
         <NativeSelect
@@ -425,10 +440,10 @@ function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () =
       </Field>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-3">
         <Field id="ra" label="Amount">
-          <MoneyInput id="ra" value={amount} onValueChange={setAmount} />
+          <MoneyInput id="ra" value={amount} onValueChange={setAmount} aria-invalid={amountBad || undefined} />
         </Field>
         <Field id="rt" label="Tenor (months)">
-          <Input id="rt" type="number" value={tenor} onChange={(e) => setTenor(e.target.value)} />
+          <Input id="rt" type="number" value={tenor} onChange={(e) => setTenor(e.target.value)} aria-invalid={tenorBad || undefined} />
         </Field>
       </div>
       {!ov.differs ? (
@@ -448,7 +463,7 @@ function RecommendDialog({ a, onClose, report }: { a: Application; onClose: () =
         </Note>
       )}
       <Field id="rr" label="Reason code" hint="Required when different from the AI recommendation.">
-        <NativeSelect id="rr" value={reason} onChange={(e) => setReason(e.target.value)}>
+        <NativeSelect id="rr" value={reason} onChange={(e) => setReason(e.target.value)} aria-invalid={reasonBad || undefined}>
           <NativeSelectOption value="">Select a reason</NativeSelectOption>
           {REASON_CODES.map((c) => (
             <NativeSelectOption key={c}>{c}</NativeSelectOption>

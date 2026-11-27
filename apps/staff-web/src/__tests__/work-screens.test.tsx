@@ -75,6 +75,13 @@ describe("case detail", () => {
     expect(within(screen.getByRole("list", { name: "Activity history" })).getAllByRole("listitem")).toHaveLength(1)
   })
 
+  it("labels a knockout decline as a simulated decision", () => {
+    setup("officer", "/applications/APP-2050", "", { id: "APP-2050" })
+    renderWithToasts(<CasePage />)
+    expect(screen.getByText(/Not scored: a policy knockout/)).toBeInTheDocument()
+    expect(screen.getByText(/^Simulated decision pipeline/)).toBeInTheDocument()
+  })
+
   it("throws not-found for an unknown case", () => {
     setup("officer", "/applications/APP-0000", "", { id: "APP-0000" })
     expect(() => renderWithToasts(<CasePage />)).toThrow("NEXT_NOT_FOUND")

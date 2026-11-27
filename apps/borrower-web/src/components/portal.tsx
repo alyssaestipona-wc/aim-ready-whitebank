@@ -1,5 +1,6 @@
 "use client"
 
+import { CoreLabel as SimCoreLabel } from "@aim-ready/ui"
 import * as React from "react"
 import Link from "next/link"
 import { ArrowLeftIcon } from "lucide-react"
@@ -80,31 +81,12 @@ export function BwList({ rows, className }: { rows: ReadonlyArray<readonly [Reac
   )
 }
 
-/** Small uppercase section label. */
-export function SectionLabel({ className, ...props }: React.ComponentProps<"p">) {
-  return <p className={cn("mt-4 mb-2 text-2xs font-semibold tracking-[0.08em] text-muted-foreground uppercase", className)} {...props} />
-}
-
 /** The red inline error note. */
 export function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
     <div role="alert" className="mt-3 mb-3.5 rounded-lg border border-danger-line bg-danger-bg px-3.5 py-3 text-sm text-danger">
       <b className="font-semibold text-danger">{children}</b>
     </div>
-  )
-}
-
-/** A neutral information note. */
-export function Note({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("mb-3.5 rounded-lg border border-border bg-g-50 px-3.5 py-3 text-sm text-text [&_b]:text-strong", className)}>{children}</div>
-}
-
-/** "Read live from core banking" label with the accent dot. */
-export function CoreLabel() {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 before:size-1.5 before:rounded-full before:bg-brand before:content-['']">
-      Read live from core banking (simulated)
-    </span>
   )
 }
 
@@ -116,4 +98,11 @@ export function CheckRow({ id, children, control }: { id: string; children: Reac
       <label htmlFor={id}>{children}</label>
     </div>
   )
+}
+
+export { Note, SectionLabel } from "@aim-ready/ui"
+
+/** Core figures in the portal are a simulated core response. */
+export function CoreLabel() {
+  return <SimCoreLabel simulated />
 }

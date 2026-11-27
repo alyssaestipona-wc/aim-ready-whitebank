@@ -366,7 +366,9 @@ function newCase(s: StaffState, id: string, o: NewCaseInput, d: DecisionRecord):
 
 function logDecision(s: StaffState, a: Application, d: DecisionRecord): void {
   const r = role()
-  log(s, r, a, d.outcome === "approve" ? `Auto-approved: score ${d.score} (${d.grade}) · rule set ${d.ruleSetVersion}` : d.outcome === "refer" ? `Referred: ${d.trigger}${d.score ? ` · score ${d.score} (${d.grade})` : ""}` : `Auto-declined: ${d.trigger}`, "System")
+  const x = d.inputs
+  log(s, r, a, `Decision record stored: rule set ${d.ruleSetVersion} · model ${d.modelVersion} · inputs amount ${peso(x.amount)}, age ${x.age}, bureau ${x.bureau}, debt-to-income ${Math.round(x.dti * 100)}%, customer ${x.years} yrs`, "System")
+  log(s, r, a, d.outcome === "approve" ? `Auto-approved: score ${d.score} (${d.grade}) · rule set ${d.ruleSetVersion}` : d.outcome === "refer" ? `Referred: ${d.trigger}${d.score ? ` · score ${d.score} (${d.grade})` : ""} · rule set ${d.ruleSetVersion}` : `Auto-declined: ${d.trigger} · rule set ${d.ruleSetVersion}`, "System")
   if (d.outcome === "refer") log(s, r, a, "Assigned to Miguel Ramos (consumer credit queue, round robin)", "System")
   if (a.aml === "Open") log(s, r, a, "AML escalation opened for compliance", "System")
 }

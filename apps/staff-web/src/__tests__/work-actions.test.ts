@@ -167,6 +167,8 @@ describe("assisted application", () => {
     const before = structuredClone(findApp(getState(), id)!.decision)
     expect(before).toMatchObject({ outcome: "refer", ruleSetVersion: "v4", modelVersion: "PL-Score 3.2" })
     expect(before!.inputs.amount).toBe(25000000)
+    const rec = findApp(getState(), id)!.hist.find((h) => h.what.startsWith("Decision record stored"))!
+    expect(rec.what).toContain("rule set v4 · model PL-Score 3.2 · inputs amount ₱250,000")
     setSessionRole("officer")
     await recommend(id, { decision: "counter", amount: 15000000, tenor: 24, reason: "Lower amount keeps repayments affordable", note: "" })
     setSessionRole("approver")

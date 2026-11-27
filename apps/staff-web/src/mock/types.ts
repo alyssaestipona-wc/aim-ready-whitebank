@@ -231,8 +231,8 @@ export type IntakeDraft = {
 
 export type AmlCase = { tenantId: string; app: string | null; name: string; match: string; status: string }
 
-/** [file, period, records, errors, status]. */
-export type CicRow = [string, string, string, number, string]
+/** [file, period, records, errors, status, tenantId]. */
+export type CicRow = [string, string, string, number, string, string]
 
 export type ProductDraft = {
   code: ProductCode
@@ -257,7 +257,9 @@ export type StaffState = {
   drafts: IntakeDraft[]
   amlCases: AmlCase[]
   cicHist: CicRow[]
+  /** Related-party rows; the last column is the tenant ID. */
   related: string[][]
+  /** Campaign rows; the last column is the tenant ID. */
   campaigns: string[][]
   /** "role:notificationId" → read. */
   notifRead: Record<string, boolean>

@@ -29,6 +29,7 @@ describe("staff sign-in", () => {
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent("Email or password is incorrect.")
     expect(alert).toHaveClass("text-danger")
+    expect(screen.getByLabelText("Password")).toHaveAttribute("aria-invalid", "true")
     expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument()
   })
 

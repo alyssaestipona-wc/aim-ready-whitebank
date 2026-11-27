@@ -455,8 +455,8 @@ function seedCic(): StaffState["cicHist"] {
   m.forEach((mo, i) => {
     const mm = `0${10 - i}`.slice(-2)
     const next = m[i - 1] || "Nov"
-    out.push([`CIC_KALINAW_2026${mm}.txt`, `${mo} 2026`, (recs - i * 2760).toLocaleString("en-PH"), 0, `Submitted ${4 + (i % 3)} ${next}`])
-    if (i % 3 === 0) out.push([`BSP_FRP_CONSUMER_2026${mm}.xlsx`, `${mo} 2026`, "—", 0, `Submitted 10 ${next}`])
+    out.push([`CIC_KALINAW_2026${mm}.txt`, `${mo} 2026`, (recs - i * 2760).toLocaleString("en-PH"), 0, `Submitted ${4 + (i % 3)} ${next}`, TENANT_ID])
+    if (i % 3 === 0) out.push([`BSP_FRP_CONSUMER_2026${mm}.xlsx`, `${mo} 2026`, "—", 0, `Submitted 10 ${next}`, TENANT_ID])
   })
   return out
 }
@@ -528,8 +528,8 @@ export function seed(): StaffState {
     drafts,
     amlCases: seedAml(),
     cicHist: seedCic(),
-    related: seedRelated(),
-    campaigns: seedCampaigns(),
+    related: seedRelated().map((r) => [...r, TENANT_ID]),
+    campaigns: seedCampaigns().map((r) => [...r, TENANT_ID]),
     notifRead: {},
   }
 }

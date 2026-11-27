@@ -97,6 +97,7 @@ function ReviewDialog({ d, onClose, onSubmit }: { d: IntakeDraft; onClose: () =>
   const [tenor, setTenor] = React.useState(String(d.tenor))
   const [govId, setGovId] = React.useState(d.flag ? "" : "PSN-1234-5678-9012")
   const [consent, setConsent] = React.useState(false)
+  const [tried, setTried] = React.useState(false)
   return (
     <ConfirmDialog
       open
@@ -104,7 +105,10 @@ function ReviewDialog({ d, onClose, onSubmit }: { d: IntakeDraft; onClose: () =>
       title={`Review draft · ${d.name}`}
       description={`Extracted from ${d.source}. Check the values, complete anything missing, then submit into the standard pipeline.`}
       okLabel="Submit application"
-      onConfirm={() => onSubmit({ amount: amount == null ? null : toCentavos(amount), tenor: Number(tenor), govId, consent })}
+      onConfirm={() => {
+        setTried(true)
+        return onSubmit({ amount: amount == null ? null : toCentavos(amount), tenor: Number(tenor), govId, consent })
+      }}
     >
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-3">
         <div className="mb-3 grid gap-[5px]">
@@ -118,10 +122,10 @@ function ReviewDialog({ d, onClose, onSubmit }: { d: IntakeDraft; onClose: () =>
       </div>
       <div className="mb-3 grid gap-[5px]">
         <Label htmlFor="dr-id">Government ID number</Label>
-        <Input id="dr-id" value={govId} placeholder="Required" onChange={(e) => setGovId(e.target.value)} />
+        <Input id="dr-id" value={govId} placeholder="Required" onChange={(e) => setGovId(e.target.value)} aria-invalid={(tried && !govId.trim()) || undefined} />
       </div>
       <div className="flex items-start gap-2.5 py-1.5 text-sm">
-        <Checkbox id="dr-con" checked={consent} onCheckedChange={(c) => setConsent(c === true)} />
+        <Checkbox id="dr-con" checked={consent} onCheckedChange={(c) => setConsent(c === true)} aria-invalid={(tried && !consent) || undefined} />
         <Label htmlFor="dr-con" className="font-normal">
           Signed consent form received from the partner
         </Label>

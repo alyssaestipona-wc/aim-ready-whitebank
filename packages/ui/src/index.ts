@@ -26,6 +26,7 @@ export * from "./components/document-viewer";
 export * from "./components/empty-state";
 export * from "./components/list-view";
 export * from "./components/money-input";
+export * from "./components/note";
 export * from "./components/page-header";
 export * from "./components/status-pill";
 export * from "./components/toast";

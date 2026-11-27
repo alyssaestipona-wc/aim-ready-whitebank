@@ -8,6 +8,8 @@ import { peso, roleOf, type Application, type HistEntry, type StaffState } from 
 import { CoreLabel, GradeBadge, KeyValues, MessageChip, Rows, Section, SectionLabel } from "../bits"
 import { docKind } from "./doc-preview"
 
+const SIMULATED_PIPELINE = "Simulated decision pipeline: rules, score and bands run in the prototype’s mock engine, not the production model."
+
 const SCALE_MIN = 450
 const SCALE_MAX = 820
 const pct = (v: number) => (((v - SCALE_MIN) / (SCALE_MAX - SCALE_MIN)) * 100).toFixed(1)
@@ -18,6 +20,7 @@ export function DecisionCard({ s, a }: { s: StaffState; a: Application }) {
     return (
       <Section title="Decision summary">
         <p className="m-0 text-muted-foreground">{a.outcome === "decline" ? "Not scored: a policy knockout ended the pipeline before scoring." : "Not decided yet. The pipeline runs when the application is submitted."}</p>
+        {a.outcome && <p className="mt-3 mb-0 text-xs text-muted-foreground">{SIMULATED_PIPELINE}</p>}
       </Section>
     )
   }
@@ -66,7 +69,7 @@ export function DecisionCard({ s, a }: { s: StaffState; a: Application }) {
           </b>
         </MessageChip>
       )}
-      <p className="mt-3 mb-0 text-xs text-muted-foreground">Simulated decision pipeline: rules, score and bands run in the prototype’s mock engine, not the production model.</p>
+      <p className="mt-3 mb-0 text-xs text-muted-foreground">{SIMULATED_PIPELINE}</p>
     </Section>
   )
 }

@@ -3,6 +3,8 @@
  * (kpi, rows, kv, pill, gradeB, slaB, CORE, note).
  */
 import { Avatar, Card, StatusPill, cn, type BadgeVariant } from "@aim-ready/ui"
+
+export { CoreLabel, Note, SectionLabel } from "@aim-ready/ui"
 import * as React from "react"
 
 import type { Grade, Outcome, Stage } from "@/mock"
@@ -40,15 +42,6 @@ export function SlaBadge({ hours }: { hours: number | null | undefined }) {
   if (hours == null) return <span className="text-subtle">—</span>
   if (hours < 0) return <span className="font-mono text-xs font-medium text-ink">{-hours}h over</span>
   return <span className={cn("font-mono text-xs font-medium", hours <= 2 ? "text-ink-3" : "text-muted-foreground")}>{hours}h left</span>
-}
-
-/** "Read live from core banking" label (simulated core response). */
-export function CoreLabel({ className }: { className?: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 before:size-1.5 before:rounded-full before:bg-brand before:content-['']", className)}>
-      Read live from core banking
-    </span>
-  )
 }
 
 export function Kpi({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
@@ -93,32 +86,9 @@ export function KeyValues({ items }: { items: ReadonlyArray<[string, React.React
   )
 }
 
-const NOTE_TONE = {
-  plain: "border-border bg-g-50 [&_b]:text-strong",
-  info: "border-brand-100 bg-brand-50 [&_b]:text-brand-700",
-  ok: "border-brand-100 bg-brand-50 [&_b]:text-brand-700",
-  warn: "border-g-300 bg-g-100 [&_b]:text-ink-3",
-  bad: "border-ink bg-paper [&_b]:text-ink",
-  err: "border-danger-line bg-danger-bg text-danger [&_b]:text-danger",
-} as const
-
-/** Callout box (prototype `.note`). */
-export function Note({ tone = "plain", children, className, flat, role }: { tone?: keyof typeof NOTE_TONE; children: React.ReactNode; className?: string; flat?: boolean; role?: string }) {
-  return (
-    <div role={role} className={cn("rounded-lg border px-3.5 py-3 text-sm text-text", NOTE_TONE[tone], flat ? "m-0" : "mb-3.5", className)}>
-      {children}
-    </div>
-  )
-}
-
 /** Gray message chip (prototype `.mc`). */
 export function MessageChip({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={cn("flex flex-wrap items-center gap-2.5 rounded-lg border border-border bg-g-50 px-3 py-2.5 text-sm [&_b]:text-strong", className)}>{children}</div>
-}
-
-/** Section label (prototype `.sec-t`). */
-export function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="eyebrow mt-4 mb-2">{children}</p>
 }
 
 /** Two-column page body that stacks under 1180px (prototype `.split`). */

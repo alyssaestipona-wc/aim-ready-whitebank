@@ -61,6 +61,18 @@ Do not skip steps. Do not start writing implementation code before a proposal ha
 - Agents do not merge PRs or force-push. A human merges.
 - Decisions recorded in `docs/adr/` are binding until superseded by a new ADR; don't quietly work around them.
 
+## Engineering standards
+
+- **Enforce rules on the backend.** Validate business rules, permissions, and authority limits (approval limits, maker-checker, role scope) in `apps/api`. Frontend validation is UX only, never the authority.
+- **Handle money precisely.** Represent monetary values as integer minor units (centavos) or an exact decimal type — never floating point. Document interest and rounding formulas wherever they're implemented.
+- **Make decisions reproducible.** Every decision record stores its inputs, rule version, and model version, per `openspec/config.yaml`'s reproducibility rule. 100% of decisions must be explainable after the fact.
+- **Maintain data consistency.** Application state, decision records, loan accounts, repayment schedules, and disbursement records must agree. Core is the system of record for accounts/balances/schedules (see Product principle P2) — don't let a local copy drift from it.
+- **Prevent duplicate transactions.** Handle retried/duplicate requests safely (idempotency keys or equivalent). Document any concurrency limitations plainly rather than leaving them implicit.
+- **Make outcomes clear.** Approval, referral, decline, and pending states must be unambiguous in the UI and API. Confirm consequential actions (disbursement, override, write-off) before executing them. Error messages must say what went wrong, not just that something did.
+- **Test expected and invalid behavior.** Every capability needs automated tests for the happy path, invalid input, and unauthorized access — not just the happy path.
+- **Be transparent about simulated services.** Any feature backed by a simulated adapter, a shortcut, or an incomplete implementation says so plainly (in the spec, the code, or both) — never silently.
+- **Isolate simulated services.** Each simulated external service (bureau, eKYC, AML, fraud, e-signature, OCR, SMS/email, income, appraisal, collateral, collections) sits behind its own interface in the adapter/integration hub, so swapping in a real provider later needs no change to workflow or decision logic. Each simulated adapter must support triggering a failure mode (timeout, outage) so the fallback-to-human path can be tested.
+
 ## Commit and PR format
 
 - Commits: Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`), scoped to the app or package touched when useful, e.g. `feat(api): add health endpoint`.

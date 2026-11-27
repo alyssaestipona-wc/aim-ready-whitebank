@@ -61,7 +61,7 @@ export default function SignPage() {
       <form noValidate onSubmit={onSubmit} onChange={() => error && setError("")}>
         <div className="mb-3 grid gap-[5px]">
           <Label htmlFor="sg-name">Type your full name to sign</Label>
-          <Input id="sg-name" autoComplete="name" aria-invalid={!!error || undefined} {...form.register("name")} />
+          <Input id="sg-name" autoComplete="name" aria-invalid={(!!error && !error.startsWith("Tick the box")) || undefined} {...form.register("name")} />
         </div>
         <div
           data-testid="signature"
@@ -75,7 +75,7 @@ export default function SignPage() {
         <div className="mt-2.5">
           <CheckRow
             id="sg-agree"
-            control={<Controller control={form.control} name="agree" render={({ field }) => <Checkbox id="sg-agree" checked={field.value} onCheckedChange={(c) => field.onChange(c === true)} />} />}
+            control={<Controller control={form.control} name="agree" render={({ field }) => <Checkbox id="sg-agree" checked={field.value} aria-invalid={(!!error?.startsWith("Tick the box") && !field.value) || undefined} onCheckedChange={(c) => field.onChange(c === true)} />} />}
           >
             I agree to sign these documents electronically.
           </CheckRow>

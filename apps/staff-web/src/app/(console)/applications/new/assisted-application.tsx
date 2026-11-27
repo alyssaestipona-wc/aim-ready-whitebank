@@ -249,7 +249,7 @@ export function AssistedApplication() {
                 ] as const
               ).map(([k, label]) => (
                 <div key={k} className="flex items-start gap-2.5 py-1.5 text-sm">
-                  <Checkbox id={`na-${k}`} checked={n[k]} onCheckedChange={(c) => set({ [k]: c === true } as Partial<AssistedDraft>)} />
+                  <Checkbox id={`na-${k}`} checked={n[k]} aria-invalid={(!!errors.consent && !n[k]) || undefined} onCheckedChange={(c) => set({ [k]: c === true } as Partial<AssistedDraft>)} />
                   <Label htmlFor={`na-${k}`} className="font-normal">
                     {label}
                   </Label>

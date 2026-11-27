@@ -4,7 +4,7 @@
  */
 import { simulateDecision, toCentavos, type DecisionPolicy, type Outcome, type PolicyRule } from "@aim-ready/core"
 
-import { STAFF_ORDER, USERS } from "./constants"
+import { STAFF_ORDER, TENANT_ID, USERS } from "./constants"
 import { products } from "./engine"
 import { MODEL_VERSION } from "./seed"
 import type { AuditEntry, StaffState, TriggerKey } from "./types"
@@ -64,12 +64,12 @@ const OVERRIDES: Array<[string, string, string, string, string, string]> = [
 ]
 
 /** Overrides of the AI recommendation: live audit entries plus sample history. */
-export function overrides(s: StaffState): Array<Pick<AuditEntry, "when" | "who" | "what" | "target">> {
+export function overrides(s: StaffState): Array<Pick<AuditEntry, "tenantId" | "when" | "who" | "what" | "target">> {
   return [
     ...s.audit.filter((a) => /override/i.test(a.what)),
-    ...OVERRIDES.map((r) => ({ when: r[0], who: r[1], what: `Recommended ${r[2]} · override (${r[3]} ₱50,000 threshold): ${r[4]}`, target: r[5] })),
-    { when: "26 Nov, 15:12", who: "Carlo Torres", what: "Recommended counter-offer ₱150,000 / 24 months · override (above ₱50,000 threshold): Strong deposit relationship with Kalinaw", target: "APP-2109" },
-    { when: "26 Nov, 11:40", who: "Nicole Santos", what: "Recommended approval ₱80,000 / 12 months · override (below ₱50,000 threshold): Verified income supports a higher amount", target: "APP-2104" },
+    ...OVERRIDES.map((r) => ({ tenantId: s.tenantId, when: r[0], who: r[1], what: `Recommended ${r[2]} · override (${r[3]} ₱50,000 threshold): ${r[4]}`, target: r[5] })),
+    { tenantId: s.tenantId, when: "26 Nov, 15:12", who: "Carlo Torres", what: "Recommended counter-offer ₱150,000 / 24 months · override (above ₱50,000 threshold): Strong deposit relationship with Kalinaw", target: "APP-2109" },
+    { tenantId: s.tenantId, when: "26 Nov, 11:40", who: "Nicole Santos", what: "Recommended approval ₱80,000 / 12 months · override (below ₱50,000 threshold): Verified income supports a higher amount", target: "APP-2104" },
   ]
 }
 
@@ -78,13 +78,13 @@ const MORE_USERS: Array<[string, string, string]> = [
   ["Teodoro Lim", "Approver", "Head of credit · L2"], ["Patricia Gomez", "Credit risk manager", "Model risk"], ["Allan Reyes", "Compliance and audit", "Read-only access"], ["Camille Ramos", "Tenant administrator", "Kalinaw Bank IT"], ["Ronald Cruz", "Branch officer", "Alabang Town Center branch"], ["Bianca Sy", "Branch officer", "Iloilo Business Park branch"], ["Vincent Tan", "Loan officer", "Consumer credit · Mindanao"], ["Hazel Garcia", "Loan operations", "Credit administration · maker"], ["Edgar Flores", "Approver", "Authority ₱1,000,000 · grades A–C"], ["Janine Ocampo", "Branch officer", "Baguio Session Road branch"], ["Leo Valdez", "Loan officer", "Consumer credit · Visayas"],
 ]
 
-export type DirectoryUser = { name: string; title: string; unit: string; id: string }
+export type DirectoryUser = { tenantId: string; name: string; title: string; unit: string; id: string }
 
 /** Staff synced from the backoffice identity service (30 shown). */
 export function directoryUsers(): DirectoryUser[] {
   return [
-    ...STAFF_ORDER.map((k) => ({ name: USERS[k].name, title: USERS[k].title, unit: USERS[k].unit, id: USERS[k].email })),
-    ...MORE_USERS.map((r, i) => ({ name: r[0], title: r[1], unit: r[2], id: `EMP-${10240 + i * 17}` })),
+    ...STAFF_ORDER.map((k) => ({ tenantId: TENANT_ID, name: USERS[k].name, title: USERS[k].title, unit: USERS[k].unit, id: USERS[k].email })),
+    ...MORE_USERS.map((r, i) => ({ tenantId: TENANT_ID, name: r[0], title: r[1], unit: r[2], id: `EMP-${10240 + i * 17}` })),
   ]
 }
 

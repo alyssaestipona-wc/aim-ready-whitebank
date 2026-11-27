@@ -29,6 +29,7 @@ const nextVersion = (v: string) => `v${Number(v.slice(1)) + 1}`
 export async function generateCic(): Promise<ActionResult> {
   if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
+    if (s.cic[0]?.[4].startsWith("Submitted")) return fail("The Nov 2026 file was already submitted.", true)
     s.cic = [["CIC_KALINAW_202611.txt", "Nov 2026", "218,400", 2, "Ready", s.tenantId]]
     log(s, role(), null, "Generated CIC submission file for Nov 2026: 2 validation errors (missing TIN on 2 records)")
     return ok("File generated: 2 validation errors to fix", "warn")
@@ -65,6 +66,7 @@ export async function exportAml(index: number): Promise<ActionResult> {
   return update((s) => {
     const m = s.amlCases[index]
     if (!m) return fail("That escalation no longer exists.", true)
+    if (m.status !== "Open") return fail("Already exported.", true)
     m.status = "Exported to AML system"
     const a = m.app ? s.apps.find((x) => x.id === m.app) : undefined
     if (a) a.aml = m.status
@@ -78,6 +80,7 @@ export async function exportAml(index: number): Promise<ActionResult> {
 export async function createProductDraft(code: ProductCode): Promise<ActionResult> {
   if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {
+    if (s.pdraft) return fail(`A ${products(s)[s.pdraft.code].name} draft is already open. Publish or discard it first.`, true)
     const p = products(s)[code]
     s.pdraft = { code, max: p.max, autoLimit: p.autoLimit, inReview: false, author: null }
     log(s, role(), null, `Created a draft for ${p.name}`)
@@ -112,6 +115,7 @@ export async function submitProductDraft(): Promise<ActionResult> {
   return update((s) => {
     const D = s.pdraft
     if (!D) return fail("No draft to submit.", true)
+    if (D.inReview) return fail("This draft is already in review.", true)
     const P = products(s)[D.code]
     if (D.autoLimit > D.max) return fail("The auto-approval limit can’t exceed the maximum amount.", true)
     D.inReview = true
@@ -141,6 +145,7 @@ export async function publishProductDraft(): Promise<ActionResult> {
 export async function createRuleDraft(): Promise<ActionResult> {
   if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {
+    if (s.cfg.draft) return fail("A draft rule set already exists.", true)
     s.cfg.draft = structuredClone({ rules: s.cfg.rules, bands: s.cfg.bands, triggers: s.cfg.triggers })
     log(s, role(), null, `Created draft rule set ${nextVersion(s.cfg.ruleset.pub)}`)
     return ok(`Draft created. Live decisions still use ${s.cfg.ruleset.pub}`)
@@ -151,6 +156,7 @@ export async function createRuleDraft(): Promise<ActionResult> {
 export async function discardRuleDraft(): Promise<ActionResult> {
   if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {
+    if (!s.cfg.draft) return fail("No draft to discard.", true)
     s.cfg.draft = null
     s.cfg.ruleset.inReview = false
     s.cfg.ruleset.author = null
@@ -183,7 +189,10 @@ export async function setDraftDti(param: number): Promise<ActionResult> {
   })
 }
 
+/** Band sliders: approve 620–780, decline 520–(approve − 5). */
 export async function setDraftBand(which: "approve" | "decline", value: number): Promise<ActionResult> {
+  const [lo, hi] = which === "approve" ? [620, 780] : [520, 780]
+  if (!Number.isFinite(value) || value < lo || value > hi) return fail(`Enter a ${which} band between ${lo} and ${hi}.`, true)
   return editDraft((d) => {
     d.bands[which] = value
     if (d.bands.decline >= d.bands.approve) d.bands.decline = d.bands.approve - 5
@@ -217,6 +226,7 @@ export async function submitRuleDraft(): Promise<ActionResult> {
   if (!canConfigure()) return fail("Read-only access", true)
   return update((s) => {
     if (!s.cfg.draft) return fail("No draft to submit.", true)
+    if (s.cfg.ruleset.inReview) return fail("This draft is already in review.", true)
     s.cfg.ruleset.inReview = true
     s.cfg.ruleset.author = me(role()).name
     log(s, role(), null, "Submitted draft rule set for review")

@@ -59,6 +59,7 @@ export async function logRefusal(route: string): Promise<ActionResult> {
 
 export async function markNotificationsRead(ids: string[]): Promise<ActionResult> {
   const role = getSessionRole()
+  if (!role) return ok()
   update((s) => {
     for (const id of ids) s.notifRead[`${role}:${id}`] = true
   })

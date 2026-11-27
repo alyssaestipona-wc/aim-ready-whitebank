@@ -179,6 +179,9 @@ export async function routeToCommittee(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     const no = refuse(a, ["Approval"], ["approver"])
     if (no) return no
+    const rc = a.recommendation
+    const auth = USERS.approver
+    if (!rc || rc.decision === "decline" || (rc.amount <= (auth.limit ?? 0) && (auth.grades ?? []).includes(a.grade ?? "E"))) return fail("This case is within individual authority.", true)
     a.stage = "Committee"
     log(s, role(), a, "Routed to credit committee: above individual authority")
     return ok()

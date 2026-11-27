@@ -352,3 +352,53 @@ describe("default-deny on every case action", () => {
     expect(snap()).toBe(before)
   })
 })
+
+describe("configuration maker-checker cannot be bypassed", () => {
+  it.each([
+    ["resubmitting a product draft in review", "admin", async (m: typeof import("@/mock")) => {
+      m.setSessionRole("risk")
+      await m.createProductDraft("PL")
+      await m.submitProductDraft()
+      m.setSessionRole("admin")
+      return m.submitProductDraft()
+    }],
+    ["creating a product draft over an open one", "admin", async (m: typeof import("@/mock")) => {
+      await m.createProductDraft("PL")
+      return m.createProductDraft("SL")
+    }],
+    ["resubmitting a rule set in review", "admin", async (m: typeof import("@/mock")) => {
+      m.setSessionRole("risk")
+      await m.createRuleDraft()
+      await m.submitRuleDraft()
+      m.setSessionRole("admin")
+      return m.submitRuleDraft()
+    }],
+    ["replacing an open rule set draft", "risk", async (m: typeof import("@/mock")) => {
+      await m.createRuleDraft()
+      return m.createRuleDraft()
+    }],
+    ["discarding with no draft", "risk", async (m: typeof import("@/mock")) => m.discardRuleDraft()],
+    ["an out-of-range band", "risk", async (m: typeof import("@/mock")) => {
+      await m.createRuleDraft()
+      return m.setDraftBand("approve", Number.NaN)
+    }],
+    ["routing a within-authority case to committee", "approver", async (m: typeof import("@/mock")) => m.routeToCommittee("APP-2043")],
+    ["exporting an escalation twice", "compliance", async (m: typeof import("@/mock")) => {
+      await m.exportAml(0)
+      return m.exportAml(0)
+    }],
+  ] as const)("refuses %s", async (_label, who, act) => {
+    setup(who)
+    expect(await act(await import("@/mock"))).toMatchObject({ ok: false })
+  })
+
+  it("keeps the original author when someone else tries to resubmit", async () => {
+    const m = await import("@/mock")
+    setup("risk")
+    await m.createProductDraft("PL")
+    await m.submitProductDraft()
+    m.setSessionRole("admin")
+    await m.submitProductDraft()
+    expect(getState().pdraft?.author).toBe("Rafael Cruz")
+  })
+})

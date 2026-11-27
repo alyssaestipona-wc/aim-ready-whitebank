@@ -196,7 +196,12 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
       let id = ""
       let dupError = ""
       store.update((s) => {
-        // Re-check after the wait: a second submit (another tab) may have landed.
+        // Re-check after the wait: the borrower may have signed out, or a
+        // second submit (another tab) may have landed.
+        if (s.session !== b.id) {
+          dupError = "Your session has ended. Sign in again."
+          return
+        }
         const dup = s.apps.find((x) => x.borrower === b.id && x.product === f.product && !["Disbursed", "Declined", "Withdrawn"].includes(x.stage))
         if (dup) {
           dupError = `You already have an open ${PRODUCTS[f.product].name.toLowerCase()} application (${dup.id}). We’ll update you on that one first.`

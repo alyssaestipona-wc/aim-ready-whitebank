@@ -51,6 +51,38 @@ Do not skip steps. Do not start writing implementation code before a proposal ha
 - `openspec/changes/` — in-flight proposals; `openspec/changes/archive/` — completed ones.
 - `docs/adr/` — binding architectural decisions, numbered.
 
+## TypeScript
+
+- `strict: true` is non-negotiable, enforced via `packages/base/tsconfig.base.json`. Don't disable it per-file.
+- No `any` outside generated code (migrations, OpenAPI clients) — use `unknown` and narrow.
+- Prefer `type` aliases; use `interface` only for class contracts.
+- All inputs at system boundaries are validated: HTTP bodies/queries with `class-validator` DTOs in `apps/api`, forms and query params with `zod` in `apps/web`. A raw, untyped request body never reaches a service method.
+- Shapes crossing the `apps/api` ↔ `apps/web` boundary live in `packages/contracts`. `apps/web` imports them `import type` only — a value import drags backend runtime code into the frontend bundle.
+
+## Backend conventions (apps/api)
+
+- One NestJS module per capability from the PRD's 12 core capabilities (application intake, work management, case review, decisioning, AI scoring, documents, collateral, booking/disbursement, collections, analytics, notifications, configuration). Don't merge unrelated capabilities into one module.
+- Controllers stay thin: request/response shape, status codes, DTO binding. Business logic — including policy rules and decision-band evaluation — lives in services, called only from `app`-layer controllers (never the reverse).
+- Guards enforce RBAC for the 9 roles; default-deny. A route with no explicit role/permission check is a bug.
+- Idempotency keys are required on booking, disbursement, and any decision- or payment-producing POST endpoint. A duplicate request returns the original result or `409`, never a second side effect.
+- Throw `HttpException` subclasses. A centralized exception filter formats responses and never leaks stack traces or internal error detail to the client.
+
+## Data (TypeORM + PostgreSQL)
+
+- Never edit a migration that's already run outside a local dev database — write a new migration.
+- Table and column names are `snake_case`; map explicitly (`@Column({ name: "..." })`) rather than relying on default casing.
+- Money is a `numeric`/`decimal` column or integer minor units — never `float`/`double`.
+- Wrap any service method that performs more than one write in a transaction (`dataSource.transaction(...)`). Example: updating a decision record and writing its audit event must both succeed or both fail.
+- Index every foreign key and every column used in a `WHERE`/`ORDER BY` on a hot path (work queues, portfolio reporting).
+- No raw SQL in business logic — query builder or repository methods only. A raw query is reserved for read-only reporting and needs review.
+
+## Frontend conventions (apps/web)
+
+- App Router route groups mirror role-scoped areas (e.g. `(loan-ops)`, `(credit-risk)`). RBAC is enforced server-side (middleware/session check) — a hidden nav item is not access control.
+- Forms: `react-hook-form` + `zod`; the zod schema matches the corresponding type in `packages/contracts`.
+- Reusable UI goes in `packages/ui`; app-local composition stays in `apps/web/src`.
+- Style values come from the Tailwind theme (`tailwind.config`/CSS variables) — no inline hex codes.
+
 ## Non-negotiables
 
 - Specs are written before code. If a change has no proposal, it does not get implemented.
@@ -72,6 +104,45 @@ Do not skip steps. Do not start writing implementation code before a proposal ha
 - **Test expected and invalid behavior.** Every capability needs automated tests for the happy path, invalid input, and unauthorized access — not just the happy path.
 - **Be transparent about simulated services.** Any feature backed by a simulated adapter, a shortcut, or an incomplete implementation says so plainly (in the spec, the code, or both) — never silently.
 - **Isolate simulated services.** Each simulated external service (bureau, eKYC, AML, fraud, e-signature, OCR, SMS/email, income, appraisal, collateral, collections) sits behind its own interface in the adapter/integration hub, so swapping in a real provider later needs no change to workflow or decision logic. Each simulated adapter must support triggering a failure mode (timeout, outage) so the fallback-to-human path can be tested.
+
+## Security
+
+- TLS 1.2+ end-to-end; no plaintext HTTP, including internal calls.
+- Secrets only via the platform secrets manager/vault. Never commit `.env` with real values; document every variable a new environment needs with a safe local default, or note it as required with no default.
+- RBAC is default-deny: every endpoint declares its required role/permission explicitly.
+- Maker-checker (a second user's sign-off) is enforced server-side on approvals, overrides, bookings, disbursements, and configuration publishes — never only in the UI.
+- Input validation whitelists known fields and rejects unknown ones at the DTO boundary.
+- No string-built SQL. No `dangerouslySetInnerHTML` without sanitization and review.
+- Errors returned to clients are generic; stack traces and internal detail stay in server-side structured logs.
+
+## Logging & observability
+
+- Structured logs only; no `console.log` in committed app code.
+- Every log line includes `tenantId`, `requestId`, and `userId` (not PII) where applicable.
+- No PII in logs — redact names, contact details, government IDs.
+- Every write that changes application, decision, booking, or configuration state is audit-logged — this is the 100% audit-trail requirement in `openspec/config.yaml`, not an optional per-feature add-on.
+
+## Resilience
+
+- Every adapter in the integration hub sits behind a circuit breaker (defaults: 5 failures / 30s → open for 60s) and can simulate a failure (timeout, outage) for testing the fallback path.
+- An adapter outage degrades to human referral, never to auto-decline or a silent retry loop.
+- Notification sends (SMS/email/push) go through an async/queued path, not inline in the request that triggers them.
+
+## Testing
+
+- Every capability change lands with a happy-path test, an invalid-input test, and an unauthorized-access test — not just the happy path.
+- `apps/api` integration tests that touch TypeORM run against a real PostgreSQL instance, not a mocked repository — mocking the DB at that layer hides the bugs it exists to catch. Pure logic (decision-band math, formatters) may unit-test with mocks.
+- The 8 PRD Phase 1 user flows (F1–F8) are the end-to-end golden paths. As each becomes functional, it gets a corresponding end-to-end test — this is part of "done," not a follow-up.
+- External services (bureau, eKYC, AML, etc.) are mocked at the HTTP boundary via their simulated adapter, never by stubbing the service class that calls them.
+
+## What an agent should not do without asking
+
+- Add a new dependency without justifying it in the proposal or PR description.
+- Change a migration that's already run outside a local dev database.
+- Change RBAC roles, approval limits, or any security default.
+- Disable a test, lint rule, or CI gate.
+- Modify `AGENTS.md` itself without raising it as its own change first.
+- Commit or push directly to `main` — branch protection blocks it; don't look for a workaround either.
 
 ## Commit and PR format
 

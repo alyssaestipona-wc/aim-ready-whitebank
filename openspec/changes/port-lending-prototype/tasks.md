@@ -58,7 +58,7 @@ steps run from the repo root unless stated.
 
   Verify the tests pass and that `grep -r "@aim-ready/core" packages/ui` finds nothing.
 - [x] 3.6 Build `ConfirmDialog` (title, description, body, red inline error, danger confirm) and a Toast provider. Add tests that a failing confirm keeps the dialog open with the error, and that Escape closes both the dialog and the dropdown menu with focus returned. Verify the tests pass.
-- [x] 3.7 Build `DocumentViewer` (ID card, sheet and agreement kinds, with metadata row), `AppStrip`, `Avatar`, `StatusPill` (accent and neutral only), `EmptyState`, `PageHeader` and `BarChart` (accent bars). Add render tests for each kind and pill variant, and a test that the mono utility applies the Geist Mono font variable. Verify no component uses `style=` or a hex literal (grep check in the test script).
+- [x] 3.7 Build `DocumentViewer` (ID card, sheet and agreement kinds, with metadata row), `AppStrip`, `Avatar`, `StatusPill` (accent and neutral only), `EmptyState`, `PageHeader` and `BarChart` (accent bars). Add render tests for each kind and pill variant, and a test that the mono utility applies the Geist Mono font variable. Verify no component uses a hex literal or a `style=` other than a data-driven CSS custom property (grep check in the test script).
 
 ## 4. staff-web: mock layer, sign-in, access control and shell (spec: staff-console sign-in, routes, shell, simulated state)
 
@@ -107,7 +107,7 @@ steps run from the repo root unless stated.
 ## 6. staff-web: closing and booking (spec: staff-console maker-checker booking)
 
 - [x] 6.1 Build `/signing` (generate documents, resend, disclosure preview) with filters and pagination. Verify a test that generate moves the case to awaiting signature.
-- [x] 6.2 Build `/booking` (pre-booking checklist, maker submit with an idempotency key, supervisor check) and `/disbursements`. Verify tests for a duplicate submit being blocked, the maker-as-checker block logged, a non-supervisor refused, a successful booking creating a loan number, compliance seeing the booking queue with no enabled actions, and the "simulated on the client" maker-checker notice being shown.
+- [x] 6.2 Build `/booking` (pre-booking checklist, maker submit with an idempotency key, supervisor check) and `/disbursements`. Verify tests for a duplicate submit being blocked, the maker-as-checker block logged, a non-supervisor refused, a successful booking creating a loan number, compliance seeing the booking queue with no enabled actions, and the maker-checker notice ("Maker-checker is simulated in this prototype until the API enforces it.") being shown.
 - [x] 6.3 Build `/exceptions`, sorted by `failedAt`, with retry using the same key. Verify a test where the core-timeout drill fails the booking, then retry books it with the same key.
 
 ## 7. staff-web: reports and compliance (spec: staff-console reports, compliance views)
@@ -121,7 +121,7 @@ steps run from the repo root unless stated.
   - render and pagination;
   - the author's publish being refused;
   - a second person's publish incrementing the version and logging both names;
-  - the "simulated on the client" maker-checker notice being shown;
+  - the maker-checker notice ("Maker-checker is simulated in this prototype until the API enforces it.") being shown;
   - an auto-limit above the maximum being refused.
 - [x] 8.2 Build `/config/workflows`, `/config/matrix`, `/config/templates` and `/config/notifications` as read-only screens. Verify render tests and that no edit or publish control exists for any role.
 - [x] 8.3 Build `/config/decisioning`:
@@ -133,7 +133,7 @@ steps run from the repo root unless stated.
   Verify tests for:
   - the author's publish being refused;
   - a second person's publish succeeding;
-  - the "simulated on the client" notice;
+  - the same simulated maker-checker notice;
   - kill switch on (with the "already decided are unaffected" text) and off, each audit-logged;
   - the kill switch disabled for every role except credit risk.
 - [x] 8.4 Build:

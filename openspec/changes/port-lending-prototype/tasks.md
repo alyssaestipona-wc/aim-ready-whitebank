@@ -6,7 +6,7 @@ steps run from the repo root unless stated.
 
 ## 1. ADR and workspace scaffolding
 
-- [ ] 1.1 Write `docs/adr/0003-separate-staff-and-borrower-web-apps.md`. It covers:
+- [x] 1.1 Write `docs/adr/0003-separate-staff-and-borrower-web-apps.md`. It covers:
   - why the borrower channel is its own app;
   - that the two mock stores are disconnected;
   - that the cookie session is a placeholder;
@@ -15,9 +15,9 @@ steps run from the repo root unless stated.
   - that the kill switch (PRD AIS-7) and module flags (PRD PLT-2) are single-user controls in both directions, outside maker-checker, per the PRD.
 
   Verify the file follows the ADR-0001 template and is linked from the proposal.
-- [ ] 1.2 Scaffold `apps/staff-web` by copying `apps/web`'s config files. Set the name to `staff-web`, the dev port to 3001 and the root layout to Geist fonts. Verify `pnpm --filter staff-web build` and `lint` pass on an empty page.
-- [ ] 1.3 Scaffold `apps/borrower-web` the same way, with dev port 3002. Verify `pnpm --filter borrower-web build` and `lint` pass.
-- [ ] 1.4 Add the cross-app URL env vars (`NEXT_PUBLIC_BORROWER_WEB_URL`, `NEXT_PUBLIC_STAFF_WEB_URL`) with local defaults, and a README per app. Each README states the mock-only scope, the disconnected stores, the placeholder session and the demo credentials. Verify the READMEs list every variable with its default.
+- [x] 1.2 Scaffold `apps/staff-web` by copying `apps/web`'s config files. Set the name to `staff-web`, the dev port to 3001 and the root layout to Geist fonts. Verify `pnpm --filter staff-web build` and `lint` pass on an empty page.
+- [x] 1.3 Scaffold `apps/borrower-web` the same way, with dev port 3002. Verify `pnpm --filter borrower-web build` and `lint` pass.
+- [x] 1.4 Add the cross-app URL env vars (`NEXT_PUBLIC_BORROWER_WEB_URL`, `NEXT_PUBLIC_STAFF_WEB_URL`) with local defaults, and a README per app. Each README states the mock-only scope, the disconnected stores, the placeholder session and the demo credentials. Verify the READMEs list every variable with its default.
 
 ## 2. packages/core: shared pure helpers (spec: staff-console and borrower-portal decision and disclosure requirements)
 

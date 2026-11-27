@@ -84,7 +84,7 @@ steps run from the repo root unless stated.
 ## 5. staff-web: My work and applications (spec: staff-console queues, case detail, officer review, approver, assisted application)
 
 - [x] 5.1 Build `/queues` (tabs including unassigned, Pick action) and `/sla` (hours-left wording via the `hrsLeft` port). Verify tests for pick ownership with a history entry, and the "1 hour left" singular wording.
-- [x] 5.2 Build `/applications` with the `appFilters` port (stage, product, channel, owner) and pagination. Verify a paging and filter test.
+- [x] 5.2 Build `/applications` with the `appFilters` port (stage, product, channel, plus a decision filter; the prototype has no owner filter) and pagination. Verify a paging and filter test.
 - [x] 5.3 Build `/applications/[id]`:
   - the applicant card with masked government ID and a Reveal dialog that logs;
   - the decision summary labelled simulated, with rule-set and model versions;

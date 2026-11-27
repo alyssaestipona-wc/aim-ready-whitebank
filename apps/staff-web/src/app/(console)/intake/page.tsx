@@ -7,7 +7,7 @@ import * as React from "react"
 
 import { Note } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
-import { isReadOnly, peso, prodName, submitIntakeDraft, uploadEmailBundle, uploadPartnerSpreadsheet, type ActionResult, type IntakeDraft } from "@/mock"
+import { getState, isReadOnly, peso, prodName, products, submitIntakeDraft, uploadEmailBundle, uploadPartnerSpreadsheet, type ActionResult, type IntakeDraft } from "@/mock"
 
 export default function IntakePage() {
   const ctx = useConsole()
@@ -98,6 +98,10 @@ function ReviewDialog({ d, onClose, onSubmit }: { d: IntakeDraft; onClose: () =>
   const [govId, setGovId] = React.useState(d.flag ? "" : "PSN-1234-5678-9012")
   const [consent, setConsent] = React.useState(false)
   const [tried, setTried] = React.useState(false)
+  const P = products(getState())[d.product]
+  const amtC = amount == null ? Number.NaN : toCentavos(amount)
+  const amountBad = tried && !(amtC >= P.min && amtC <= P.max)
+  const tenorBad = tried && !(Number(tenor) >= P.tmin && Number(tenor) <= P.tmax)
   return (
     <ConfirmDialog
       open
@@ -113,11 +117,11 @@ function ReviewDialog({ d, onClose, onSubmit }: { d: IntakeDraft; onClose: () =>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-3">
         <div className="mb-3 grid gap-[5px]">
           <Label htmlFor="dr-amt">Amount</Label>
-          <MoneyInput id="dr-amt" value={amount} onValueChange={setAmount} />
+          <MoneyInput id="dr-amt" value={amount} onValueChange={setAmount} aria-invalid={amountBad || undefined} />
         </div>
         <div className="mb-3 grid gap-[5px]">
           <Label htmlFor="dr-ten">Tenor (months)</Label>
-          <Input id="dr-ten" type="number" value={tenor} onChange={(e) => setTenor(e.target.value)} />
+          <Input id="dr-ten" type="number" value={tenor} aria-invalid={tenorBad || undefined} onChange={(e) => setTenor(e.target.value)} />
         </div>
       </div>
       <div className="mb-3 grid gap-[5px]">

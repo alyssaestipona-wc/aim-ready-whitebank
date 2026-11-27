@@ -489,6 +489,7 @@ export async function submitIntakeDraft(index: number, input: { amount: Centavos
     const P = products(s)[d.product as ProductCode]
     const amt = input.amount ?? Number.NaN
     if (!(amt >= P.min && amt <= P.max)) return fail(`Amount must be between ${peso(P.min)} and ${peso(P.max)}.`)
+    if (!(input.tenor >= P.tmin && input.tenor <= P.tmax)) return fail(`Tenor must be ${P.tmin} to ${P.tmax} months.`)
     const x: DecisionInput = { product: d.product, amount: amt, age: d.age, sanctions: false, defaulted: false, bureau: "Full file", years: 3, dti: 0.12, mismatch: 0, stable: true }
     const r = simulateDecision(x, policyOf(s))
     s.seq += 1

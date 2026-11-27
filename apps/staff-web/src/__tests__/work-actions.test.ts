@@ -239,3 +239,14 @@ describe("closing and booking", () => {
     expect(a.hist.some((h) => h.what === `Retried booking with the same idempotency key ${key}`)).toBe(true)
   })
 })
+
+describe("intake", () => {
+  it("refuses a tenor outside the product's range", async () => {
+    setup("officer")
+    const { submitIntakeDraft } = await import("@/mock")
+    const idx = getState().drafts.findIndex((d) => d.status === "Draft")
+    const r = await submitIntakeDraft(idx, { amount: 5000000, tenor: 0, govId: "PSN-1", consent: true })
+    expect(r).toMatchObject({ ok: false })
+    expect(getState().drafts[idx]!.status).toBe("Draft")
+  })
+})

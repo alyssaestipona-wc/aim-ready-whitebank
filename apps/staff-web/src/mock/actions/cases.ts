@@ -13,7 +13,7 @@ import { baseRole, findApp, log, me, now, peso, policyOf, products, termsOf } fr
 import { MODEL_VERSION } from "../seed"
 import { getSessionRole } from "../session"
 import { getState, update } from "../store"
-import type { Application, AssistedDraft, IntakeDraft, ProductCode, StaffState } from "../types"
+import type { Application, AssistedDraft, BaseRole, IntakeDraft, ProductCode, StaffState, Stage } from "../types"
 import { fail, ok, type ActionResult } from "./result"
 
 function withCase(id: string, fn: (s: StaffState, a: Application) => ActionResult): ActionResult {
@@ -27,9 +27,23 @@ function withCase(id: string, fn: (s: StaffState, a: Application) => ActionResul
 
 const role = () => getSessionRole()
 
+/**
+ * Simulated server-side guard: the case must be at one of `stages` and the
+ * user's base role one of `roles`. Returns the refusal, or null.
+ */
+function refuse(a: Application, stages: readonly Stage[], roles: readonly BaseRole[]): ActionResult | null {
+  if (!stages.includes(a.stage)) return fail(`Not possible while the case is at the ${a.stage} stage.`, true)
+  const r = baseRole(role())
+  if (!r || !roles.includes(r)) return fail("Your role can’t do this.", true)
+  return null
+}
+
 /** Officer takes an unassigned case into their queue. */
 export async function pickCase(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Review"], ["officer"])
+    if (no) return no
+    if (a.owner) return fail(`Already owned by ${a.owner}.`, true)
     a.owner = me(role()).name
     log(s, role(), a, "Picked from the unassigned queue")
     return ok(`${a.name} is now in your queue`)
@@ -53,6 +67,9 @@ export const INFO_ITEMS = [
 export async function requestInfo(id: string, input: { items: string[]; message: string; due: string }): Promise<ActionResult> {
   if (!input.items.length) return fail("Pick at least one item to request.")
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Review"], ["officer"])
+    if (no) return no
+    if (a.owner !== me(role()).name) return fail("Only the owning officer can request information.", true)
     a.infoReq = input.items.join(", ")
     a.infoMsg = input.message
     a.infoDue = input.due
@@ -83,6 +100,9 @@ export function overrideLevel(a: Application, decision: RecommendInput["decision
 
 export async function recommend(id: string, input: RecommendInput): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Review"], ["officer"])
+    if (no) return no
+    if (a.owner !== me(role()).name) return fail("Only the owning officer can recommend a decision.", true)
     const P = products(s)[a.product]
     let d = input.decision
     let amt = input.amount ?? (input.decision === "decline" ? a.amount : Number.NaN)
@@ -117,6 +137,8 @@ export async function startApproval(id: string): Promise<ActionResult & { next?:
   const s0 = getState()
   const a0 = findApp(s0, id)
   if (!a0 || !a0.recommendation) return fail("That case no longer exists.", true)
+  const no = refuse(a0, ["Approval"], ["approver"])
+  if (no) return no
   const rc = a0.recommendation
   if (rc.by === me(r).name) {
     withCase(id, (s, a) => {
@@ -155,6 +177,8 @@ export async function confirmDecline(id: string): Promise<ActionResult> {
 
 export async function routeToCommittee(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Approval"], ["approver"])
+    if (no) return no
     a.stage = "Committee"
     log(s, role(), a, "Routed to credit committee: above individual authority")
     return ok()
@@ -180,6 +204,8 @@ export async function approve(id: string): Promise<ActionResult> {
 
 export async function returnToOfficer(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Approval"], ["approver"])
+    if (no) return no
     a.owner = a.recommendation ? a.recommendation.by : null
     a.stage = "Review"
     a.sla = 8
@@ -203,6 +229,8 @@ export async function declineCase(id: string, reason: string): Promise<ActionRes
 
 export async function withdrawCase(id: string, reason: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Draft", "Review", "Info requested", "Approval", "Offer", "Documentation"], ["officer", "branch"])
+    if (no) return no
     a.withdrawReason = reason.toLowerCase()
     a.stage = "Withdrawn"
     a.sla = null
@@ -214,6 +242,8 @@ export async function withdrawCase(id: string, reason: string): Promise<ActionRe
 
 export async function generateDocs(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Documentation"], ["ops"])
+    if (no) return no
     a.borrowerPending = "sign"
     a.docs = a.docs.filter((d) => !/agreement|Promissory/i.test(d[0])).concat([["Loan agreement", "Sent for signature"], ["Promissory note", "Sent for signature"]])
     log(s, role(), a, "Generated loan agreement and promissory note from templates (v5, v2) and sent for e-signature")
@@ -223,6 +253,8 @@ export async function generateDocs(id: string): Promise<ActionResult> {
 
 export async function resendSignature(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
+    const no = refuse(a, ["Documentation"], ["ops"])
+    if (no) return no
     log(s, role(), a, "Resent e-signature request")
     return ok("Reminder sent to the borrower")
   })
@@ -248,6 +280,7 @@ export function checklist(a: Application): Array<[string, boolean, string]> {
 export async function submitBooking(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     if (a.stage !== "Booking" || a.booking?.status === "failed") return fail("Already submitted. Duplicate blocked.", true, "warn")
+    if (role() !== "ops") return fail("Only loan operations prepares bookings.", true)
     a.booking = { status: "pending", maker: me(role()).name, key: `bk-${a.id}-${randomKeySuffix()}`, attempts: 0 }
     a.stage = "Pending checker"
     log(s, role(), a, `Submitted booking for checker (idempotency key ${a.booking.key})`)
@@ -420,6 +453,7 @@ export function validateAssisted(n: AssistedDraft): AssistedErrors {
 
 /** Saves the assisted application as a resumable draft. */
 export async function saveAssistedDraft(n: AssistedDraft, draftId: string | null): Promise<ActionResult> {
+  if (!["branch", "officer"].includes(baseRole(role()) ?? "")) return fail("Your role can’t do this.", true)
   if (!n.name.trim()) return fail("Enter at least the customer’s name to save a draft.")
   return update((s) => {
     let a = draftId ? findApp(s, draftId) : undefined
@@ -445,6 +479,7 @@ export async function saveAssistedDraft(n: AssistedDraft, draftId: string | null
 
 /** Runs the simulated pipeline on an assisted application and opens the case. */
 export async function submitAssisted(n: AssistedDraft, draftId: string | null): Promise<ActionResult> {
+  if (!["branch", "officer"].includes(baseRole(role()) ?? "")) return fail("Your role can’t do this.", true)
   const s0 = getState()
   const P = products(s0)[n.product]
   const dup = s0.apps.find((a) => a.name === n.name && a.product === n.product && a.id !== draftId && !["Disbursed", "Declined", "Withdrawn", "Draft"].includes(a.stage))
@@ -477,6 +512,7 @@ export async function submitAssisted(n: AssistedDraft, draftId: string | null): 
 }
 
 export async function uploadPartnerSpreadsheet(): Promise<ActionResult> {
+  if (!["branch", "officer"].includes(baseRole(role()) ?? "")) return fail("Your role can’t do this.", true)
   return update((s) => {
     s.intakeFile = "Cordillera Foods HR · salary loan requests Nov 2026.xlsx"
     const rows: IntakeDraft[] = [
@@ -491,6 +527,7 @@ export async function uploadPartnerSpreadsheet(): Promise<ActionResult> {
 }
 
 export async function uploadEmailBundle(): Promise<ActionResult> {
+  if (!["branch", "officer"].includes(baseRole(role()) ?? "")) return fail("Your role can’t do this.", true)
   return update((s) => {
     s.drafts.unshift({ tenantId: s.tenantId, name: "Grace Villamor", product: "PL", amount: 12000000, tenor: 24, income: 5800000, age: 33, source: "Email from g.villamor@… with 3 attachments", flag: null, status: "Draft" })
     log(s, role(), null, "Extracted an email bundle into a draft application")
@@ -500,6 +537,7 @@ export async function uploadEmailBundle(): Promise<ActionResult> {
 
 /** Submits a reviewed intake draft (by its index in the drafts list). */
 export async function submitIntakeDraft(index: number, input: { amount: Centavos | null; tenor: number; govId: string; consent: boolean }): Promise<ActionResult> {
+  if (!["branch", "officer"].includes(baseRole(role()) ?? "")) return fail("Your role can’t do this.", true)
   if (!input.govId.trim()) return fail("Enter the government ID number before submitting.")
   if (!input.consent) return fail("Confirm the signed consent form is on file.")
   return update((s) => {

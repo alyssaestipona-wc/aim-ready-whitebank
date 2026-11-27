@@ -27,7 +27,7 @@ const nextVersion = (v: string) => `v${Number(v.slice(1)) + 1}`
 /* ---------------- regulatory extracts (CIC) ---------------- */
 
 export async function generateCic(): Promise<ActionResult> {
-  if (role() === "compliance") return fail("Read-only access", true)
+  if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
     s.cic = [["CIC_KALINAW_202611.txt", "Nov 2026", "218,400", 2, "Ready", s.tenantId]]
     log(s, role(), null, "Generated CIC submission file for Nov 2026: 2 validation errors (missing TIN on 2 records)")
@@ -36,7 +36,7 @@ export async function generateCic(): Promise<ActionResult> {
 }
 
 export async function fixCic(): Promise<ActionResult> {
-  if (role() === "compliance") return fail("Read-only access", true)
+  if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
     const f = s.cic[0]
     if (!f) return fail("No file to fix.", true)
@@ -47,7 +47,7 @@ export async function fixCic(): Promise<ActionResult> {
 }
 
 export async function submitCic(): Promise<ActionResult> {
-  if (role() === "compliance") return fail("Read-only access", true)
+  if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
     const f = s.cic[0]
     if (!f) return fail("No file to submit.", true)
@@ -61,6 +61,7 @@ export async function submitCic(): Promise<ActionResult> {
 /* ---------------- AML ---------------- */
 
 export async function exportAml(index: number): Promise<ActionResult> {
+  if (role() !== "compliance") return fail("Your role can’t do this.", true)
   return update((s) => {
     const m = s.amlCases[index]
     if (!m) return fail("That escalation no longer exists.", true)
@@ -175,7 +176,7 @@ export async function toggleDraftRule(index: number): Promise<ActionResult> {
 }
 
 export async function setDraftDti(param: number): Promise<ActionResult> {
-  if (!Number.isFinite(param) || param <= 0 || param > 100) return fail("Enter a debt-to-income cap between 1 and 100%.")
+  if (!Number.isFinite(param) || param < 1 || param > 100) return fail("Enter a debt-to-income cap between 1 and 100%.")
   return editDraft((d) => {
     const r = d.rules.find((x) => x.id === "dti")
     if (r) r.param = param

@@ -315,3 +315,28 @@ describe("unauthorized decisions", () => {
     expect(await retryBooking("APP-2052")).toMatchObject({ ok: false, error: "Only loan operations can retry a booking." })
   })
 })
+
+describe("default-deny on every case action", () => {
+  const no = { ok: false }
+  it.each([
+    ["pickCase by compliance", "compliance", async (m: typeof import("@/mock")) => m.pickCase("APP-2058")],
+    ["pickCase of an owned case", "officer", async (m: typeof import("@/mock")) => m.pickCase("APP-2041")],
+    ["requestInfo by a non-owner officer", "officer", async (m: typeof import("@/mock")) => m.requestInfo("APP-2058", { items: ["x"], message: "", due: "" })],
+    ["recommend by compliance", "compliance", async (m: typeof import("@/mock")) => m.recommend("APP-2041", { decision: "approve", amount: 18000000, tenor: 24, reason: "", note: "" })],
+    ["startApproval by an officer", "officer", async (m: typeof import("@/mock")) => m.startApproval("APP-2043")],
+    ["routeToCommittee by an officer", "officer", async (m: typeof import("@/mock")) => m.routeToCommittee("APP-2043")],
+    ["returnToOfficer at Review", "approver", async (m: typeof import("@/mock")) => m.returnToOfficer("APP-2041")],
+    ["withdraw a declined case", "officer", async (m: typeof import("@/mock")) => m.withdrawCase("APP-2050", "Customer request")],
+    ["generateDocs by an officer", "officer", async (m: typeof import("@/mock")) => m.generateDocs(getState().apps.find((a) => a.stage === "Documentation")!.id)],
+    ["submitBooking by the supervisor", "opssup", async (m: typeof import("@/mock")) => m.submitBooking(getState().apps.find((a) => a.stage === "Booking" && a.booking?.status !== "failed")!.id)],
+    ["submitAssisted by ops", "ops", async (m: typeof import("@/mock")) => m.submitAssisted(m.blankAssisted(), null)],
+    ["intake upload by compliance", "compliance", async (m: typeof import("@/mock")) => m.uploadPartnerSpreadsheet()],
+    ["CIC generate by an officer", "officer", async (m: typeof import("@/mock")) => m.generateCic()],
+    ["AML export by admin", "admin", async (m: typeof import("@/mock")) => m.exportAml(0)],
+  ] as const)("refuses %s", async (_label, who, act) => {
+    setup(who)
+    const before = JSON.stringify(getState().apps)
+    expect(await act(await import("@/mock"))).toMatchObject(no)
+    expect(JSON.stringify(getState().apps)).toBe(before)
+  })
+})

@@ -390,7 +390,7 @@ function BandSegment({ pct, className }: { pct: number; className: string }) {
 function DtiInput({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
   const [text, setText] = React.useState(String(value))
   const n = text.trim() === "" ? Number.NaN : Number(text)
-  const bad = !Number.isFinite(n) || n <= 0 || n > 100
+  const bad = !Number.isFinite(n) || n < 1 || n > 100
   return (
     <>
       <Input

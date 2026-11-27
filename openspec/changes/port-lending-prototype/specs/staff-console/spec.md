@@ -49,6 +49,11 @@ Each staff route SHALL be reachable only by the roles the prototype's navigation
 - **WHEN** a case, the booking queue or a configuration screen is opened
 - **THEN** the content is visible but every state-changing action is disabled or absent
 
+#### Scenario: Compliance exports its own AML escalations
+- **GIVEN** the compliance role on AML escalations, a screen only compliance can open
+- **WHEN** "Mark reviewed and export" is selected
+- **THEN** the export is allowed, as the prototype does, and audit-logged
+
 ### Requirement: Console shell
 Every signed-in console page SHALL show:
 - a slim top strip with the app name and a link to the borrower web app;
@@ -295,7 +300,7 @@ Credit risk, administrators and compliance SHALL see the configuration screens t
 - AI models (behind the AI flag);
 - integrations, users and tenant settings.
 
-Only product parameters, the rule set, the kill switch, module flags and the failure drills SHALL be changeable. Every other configuration screen SHALL be read-only, with no publish path.
+Only product parameters, the rule set, the kill switch, automation modes, module flags and the failure drills SHALL be changeable. Every other configuration screen SHALL be read-only, with no publish path.
 
 #### Scenario: Read-only configuration
 - **GIVEN** the administrator is signed in
@@ -321,10 +326,10 @@ Product parameter and rule-set changes SHALL follow draft, then submit for revie
 - **THEN** it is refused with "The auto-approval limit can't exceed the maximum amount."
 
 ### Requirement: Kill switch is a single-user control
-Per PRD story AIS-7, credit risk SHALL turn the global kill switch on or off with one confirmation and no second sign-off. Turning it on SHALL state that applications already decided are unaffected. Both directions SHALL be audit-logged with who and when.
+Per PRD story AIS-7, credit risk SHALL, from the AI models screen's automation controls, turn the global kill switch on or off with one confirmation and set each product's automation mode (live, shadow, off), with no second sign-off. Turning it on SHALL state that applications already decided are unaffected. Both directions SHALL be audit-logged with who and when.
 
 #### Scenario: Kill switch on
-- **GIVEN** credit risk on Decisioning
+- **GIVEN** credit risk on AI models
 - **WHEN** "Turn kill switch on" is confirmed
 - **THEN** the dialog has stated that decided applications are unaffected, it takes effect at once, and the audit log records who turned it on
 
@@ -334,7 +339,7 @@ Per PRD story AIS-7, credit risk SHALL turn the global kill switch on or off wit
 - **THEN** automated decisions resume and the audit log records who turned it off
 
 #### Scenario: Other roles cannot toggle
-- **GIVEN** the administrator on Decisioning
+- **GIVEN** the administrator on AI models
 - **WHEN** the kill switch control is shown
 - **THEN** it is disabled
 

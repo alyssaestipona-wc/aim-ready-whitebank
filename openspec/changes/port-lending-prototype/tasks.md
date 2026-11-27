@@ -112,22 +112,23 @@ steps run from the repo root unless stated.
 
 ## 7. staff-web: reports and compliance (spec: staff-console reports, compliance views)
 
-- [ ] 7.1 Build `/reports/funnel`, `/reports/sla`, `/reports/decisioning` and `/reports/regulatory` with `BarChart` and paginated tables. Regulatory adds the CIC generate, fix-and-regenerate and mark-submitted actions. Verify render tests per permitted role, that bars use only the accent token, that Mark submitted is disabled while errors remain, and that fixing and submitting is audit-logged.
-- [ ] 7.2 Build `/compliance/audit`, `/consent`, `/aml` ("Mark reviewed and export"), `/related` and `/governance` (findings list). Verify tests for the audit actor filter, the AML export being logged, and governance visible to risk but not to admin.
+- [x] 7.1 Build `/reports/funnel`, `/reports/sla`, `/reports/decisioning` and `/reports/regulatory` with `BarChart` and paginated tables. Regulatory adds the CIC generate, fix-and-regenerate and mark-submitted actions. Verify render tests per permitted role, that bars use only the accent token, that Mark submitted is disabled while errors remain, and that fixing and submitting is audit-logged.
+- [x] 7.2 Build `/compliance/audit`, `/consent`, `/aml` ("Mark reviewed and export"), `/related` and `/governance` (findings list). Verify tests for the audit actor filter, the AML export being logged, and governance visible to risk but not to admin.
 
 ## 8. staff-web: configuration (spec: staff-console tenant configuration)
 
-- [ ] 8.1 Build `/config/products` (products and campaigns tabs) and `/config/products/[code]` (product tabs, draft, submit, publish by a second person). Verify tests for:
+- [x] 8.1 Build `/config/products` (products and campaigns tabs) and `/config/products/[code]` (product tabs, draft, submit, publish by a second person). Verify tests for:
   - render and pagination;
   - the author's publish being refused;
   - a second person's publish incrementing the version and logging both names;
   - the "simulated on the client" maker-checker notice being shown;
   - an auto-limit above the maximum being refused.
-- [ ] 8.2 Build `/config/workflows`, `/config/matrix`, `/config/templates` and `/config/notifications` as read-only screens. Verify render tests and that no edit or publish control exists for any role.
-- [ ] 8.3 Build `/config/decisioning`:
+- [x] 8.2 Build `/config/workflows`, `/config/matrix`, `/config/templates` and `/config/notifications` as read-only screens. Verify render tests and that no edit or publish control exists for any role.
+- [x] 8.3 Build `/config/decisioning`:
   - rule toggles, referral triggers, add rule, draft, submit for review, and publish by a second person;
-  - reason codes;
-  - the kill switch.
+  - reason codes.
+
+  The kill switch and automation modes sit on AI models (task 8.4), as in the prototype.
 
   Verify tests for:
   - the author's publish being refused;
@@ -135,8 +136,8 @@ steps run from the repo root unless stated.
   - the "simulated on the client" notice;
   - kill switch on (with the "already decided are unaffected" text) and off, each audit-logged;
   - the kill switch disabled for every role except credit risk.
-- [ ] 8.4 Build:
-  - `/config/models` (overrides list);
+- [x] 8.4 Build:
+  - `/config/models` (overrides list, automation controls: per-product mode and the credit-risk-only kill switch);
   - `/config/integrations` (admin-only bureau and core failure drills, otherwise read-only);
   - read-only `/config/users` (30 users);
   - `/config/tenant` (holidays, and the admin-only AI module flag that mirrors to the cookie).
@@ -178,7 +179,7 @@ steps run from the repo root unless stated.
 
 ## 10. Integration checks
 
-- [ ] 10.1 Run `pnpm build`, `pnpm lint` and `pnpm test` at the root. Verify all workspaces pass.
+- [x] 10.1 Run `pnpm build`, `pnpm lint` and `pnpm test` at the root. Verify all workspaces pass.
 - [ ] 10.2 Run a WebKit (Safari engine) smoke pass over every route in both apps at 1440 px and 400 px. Verify zero page errors and no horizontal page scroll, and record the results in the PR description.
 - [ ] 10.3 Walk every Scenario in the three spec deltas by hand against the running apps. Verify each one, and note any deviation in the PR description.
 

@@ -217,7 +217,8 @@ Error copy is the prototype's verbatim.
 - **Adapted:** prototype-only `S.mode` switching is removed.
 - **Unchanged:** all copy, data, filters, page sizes and error strings, which are ported as-is.
 - **Configuration:** only product parameters and the rule set are editable, both through the prototype's draft, submit and publish maker-checker (PRD PC-1).
-  - The kill switch (credit risk only, PRD AIS-7) and the AI module flag on Tenant settings (administrator only, PRD PLT-2) are single-user, single-confirm controls in both directions. Both directions are audit-logged.
+  - The kill switch and per-product automation mode (credit risk only, on AI models, PRD AIS-7) and the AI module flag on Tenant settings (administrator only, PRD PLT-2) are single-user, single-confirm controls in both directions. Every change is audit-logged.
+  - Compliance can export AML escalations, its own screen, as in the prototype; every other compliance control is read-only.
   - The failure drills on Integrations are admin-only testing toggles of the simulated adapters.
   - Everything else is read-only, as in the prototype.
 - **Policy values:** the override threshold (₱50,000), approver authority (₱1,000,000, grades A–C), decision bands (700/600) and the 10 MB upload limit live in each app's mock tenant config and are passed to the code that uses them. They are never literals in components or in `packages/core`.

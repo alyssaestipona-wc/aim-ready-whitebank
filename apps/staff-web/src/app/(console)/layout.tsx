@@ -1,5 +1,21 @@
-import { ConsoleShell } from "@/components/console-shell"
+import { Suspense } from "react"
+
+import { ConsoleShell, ShellSkeleton } from "@/components/console-shell"
+import { StaffStrip } from "@/components/staff-strip"
 
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  return <ConsoleShell>{children}</ConsoleShell>
+  // The shell reads the URL (breadcrumbs, active nav), which is request-time
+  // data for dynamic routes such as /applications/[id].
+  return (
+    <Suspense
+      fallback={
+        <>
+          <StaffStrip />
+          <ShellSkeleton />
+        </>
+      }
+    >
+      <ConsoleShell>{children}</ConsoleShell>
+    </Suspense>
+  )
 }

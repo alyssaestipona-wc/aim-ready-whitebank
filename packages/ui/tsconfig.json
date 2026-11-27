@@ -1,0 +1,9 @@
+{
+  "extends": "@aim-ready/base/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

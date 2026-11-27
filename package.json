@@ -1,0 +1,19 @@
+{
+  "name": "aim-ready",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AIM READY monorepo",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@fission-ai/openspec": "^2.2.0",
+    "turbo": "^2.11.13",
+    "typescript": "^7.0.2"
+  }
+}

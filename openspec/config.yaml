@@ -1,0 +1,32 @@
+schema: spec-driven
+
+context: |
+  AIM READY is a pnpm/Turborepo monorepo.
+  Stack: Node 22, NestJS 11, TypeScript, TypeORM 0.3 on PostgreSQL 15+, Jest (apps/api).
+  Stack: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Vitest, ESLint 9 (apps/web).
+  Shared code lives in packages/ (core, contracts, base, ui) and must not depend on app code.
+  Specs are stored flat at openspec/specs/<capability>/spec.md.
+
+rules:
+  proposal:
+    - State what is in scope and out of scope.
+    - Name every capability touched and whether it is new or existing.
+    - Call out any schema, API contract, or shared-package change explicitly.
+  specs:
+    - Keep one spec per capability at openspec/specs/<capability>/spec.md.
+    - Every requirement must have at least one Scenario.
+    - Specs describe behavior, not implementation detail.
+  tasks:
+    - Break tasks into reviewable, independently testable chunks.
+    - Order tasks so earlier tasks unblock later ones.
+
+operations:
+  apply:
+    guidance:
+      - Follow the repo loop: explore, propose, verify, apply, spec review, manual test, code review, archive, PR.
+      - Run `/spec-review` and `/code-review` and repeat each until clean before moving on.
+      - Keep test summaries concise.
+  archive:
+    guidance:
+      - Confirm specs under openspec/specs/ reflect the final implemented behavior before archiving.
+      - Summarize the archive outcome before finishing.

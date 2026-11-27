@@ -35,7 +35,7 @@ describe("console shell", () => {
     await userEvent.click(within(screen.getByRole("complementary")).getByRole("button", { name: "Sign out" }))
     expect(getSessionRole()).toBeNull()
     expect(document.cookie).not.toContain("wbl_staff_session=officer")
-    expect(nav.router.replace).toHaveBeenCalledWith("/sign-in")
+    expect(nav.hard).toHaveBeenCalledWith("/sign-in")
   })
 
   it("shows the read-only banner for compliance", () => {

@@ -51,9 +51,9 @@ Each staff route SHALL be reachable only by the roles the prototype's navigation
 
 ### Requirement: Console shell
 Every signed-in console page SHALL show:
-- a slim top strip with the app name, a link to the borrower web app and a notifications bell;
-- a grouped sidebar with the user's name, role and a sign-out button beside them;
-- a page header.
+- a slim top strip with the app name and a link to the borrower web app;
+- a header with breadcrumbs, a notifications bell and an account menu;
+- a grouped sidebar with the user's name, role and a sign-out button beside them.
 
 The header SHALL NOT have a search bar. The Guided demo control SHALL NOT appear.
 

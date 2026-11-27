@@ -2,20 +2,19 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button, Input, Label } from "@aim-ready/ui"
-import { useRouter } from "next/navigation"
 import * as React from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { checkCredentials, verifyCode, USERS, type RoleKey } from "@/mock"
 import { pathOf, LANDING } from "@/lib/access"
+import { navigateHard } from "@/lib/navigation"
 
 const credentialsSchema = z.object({ email: z.string(), password: z.string() })
 const codeSchema = z.object({ code: z.string() })
 
 /** Two-step staff sign-in: email and password, then the authenticator code. */
 export function SignInForm() {
-  const router = useRouter()
   const [step, setStep] = React.useState<{ role: RoleKey; email: string } | null>(null)
   const [error, setError] = React.useState("")
   const creds = useForm<z.infer<typeof credentialsSchema>>({ resolver: zodResolver(credentialsSchema), defaultValues: { email: "", password: "" } })
@@ -33,7 +32,7 @@ export function SignInForm() {
     if (!step) return
     const r = await verifyCode(step.role, v.code)
     if (!r.ok) return setError(r.error)
-    router.replace(pathOf(LANDING[step.role]))
+    navigateHard(pathOf(LANDING[step.role]))
   })
 
   const errorNote = error ? (

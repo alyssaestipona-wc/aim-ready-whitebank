@@ -14,4 +14,6 @@ vi.mock("next/navigation", () => ({
   },
 }))
 
+vi.mock("@/lib/navigation", () => ({ navigateHard: (path: string) => nav.hard(path) }))
+
 afterEach(() => cleanup())

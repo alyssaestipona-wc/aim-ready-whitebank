@@ -18,6 +18,7 @@ import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 
 import { LANDING, matchRoute, navFor, pathOf, type RouteKey } from "@/lib/access"
+import { navigateHard } from "@/lib/navigation"
 import { counts, isReadOnly, me, resetDemoData, setFlagsCookie, signOut } from "@/mock"
 
 import { Brand } from "./brand"
@@ -77,7 +78,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
 
   async function doSignOut() {
     await signOut()
-    router.replace("/sign-in")
+    navigateHard("/sign-in")
   }
 
   const crumbs = route ? (

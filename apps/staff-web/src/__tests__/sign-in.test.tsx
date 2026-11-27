@@ -62,7 +62,7 @@ describe("staff sign-in", () => {
     await userEvent.type(screen.getByLabelText("Authentication code"), "123456")
     await userEvent.click(screen.getByRole("button", { name: "Verify and sign in" }))
     expect(getSessionRole()).toBe(role)
-    expect(nav.router.replace).toHaveBeenCalledWith(path)
+    expect(nav.hard).toHaveBeenCalledWith(path)
     expect(getState().audit[0]).toMatchObject({ who: USERS[role].name, what: "Signed in (SSO + MFA)" })
   })
 })

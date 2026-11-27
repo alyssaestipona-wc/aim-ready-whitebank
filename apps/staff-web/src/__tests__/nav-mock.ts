@@ -6,6 +6,8 @@ export const nav = {
   searchParams: new URLSearchParams(),
   params: {} as Record<string, string>,
   router: { push: vi.fn(), replace: vi.fn(), back: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() },
+  /** Full-page loads (sign-in and sign-out). */
+  hard: vi.fn(),
 }
 
 export function resetNav(pathname = "/", search = "", params: Record<string, string> = {}) {
@@ -14,4 +16,5 @@ export function resetNav(pathname = "/", search = "", params: Record<string, str
   nav.params = params
   nav.router.push.mockReset()
   nav.router.replace.mockReset()
+  nav.hard.mockReset()
 }

@@ -151,8 +151,8 @@ steps run from the repo root unless stated.
 
 ## 9. borrower-web: mock layer and screens (spec: borrower-portal)
 
-- [ ] 9.1 Port `BORROWERS`, `BW_MSGS`, `PRODUCTS` and the borrower-facing status helpers (`plainStatus`, `borrowerReason`, `bwSteps`) into `src/mock`. Add the store and `tenantId`. Verify store persistence and reset tests.
-- [ ] 9.2 Implement the simulated bank progression in the mock layer (design D5):
+- [x] 9.1 Port `BORROWERS`, `BW_MSGS`, `PRODUCTS` and the borrower-facing status helpers (`plainStatus`, `borrowerReason`, `bwSteps`) into `src/mock`. Add the store and `tenantId`. Verify store persistence and reset tests.
+- [x] 9.2 Implement the simulated bank progression in the mock layer (design D5):
   - referral becomes info requested;
   - after upload, the case moves to offer;
   - accepted becomes documents to sign;
@@ -160,21 +160,21 @@ steps run from the repo root unless stated.
   - each step is logged as simulated.
 
   Verify fake-timer tests for each transition at 4 s and the on-load catch-up.
-- [ ] 9.3 Build `proxy.ts` (signed-in check), `/sign-in` (email and password, verbatim error) and the shell:
+- [x] 9.3 Build `proxy.ts` (signed-in check), `/sign-in` (email and password, verbatim error) and the shell:
   - the strip with the staff-console link;
   - the header with the inbox badge and profile menu (Account, Sign out);
   - the centred 760 px column;
   - loading, error and not-found pages.
 
   Verify tests for the wrong password, the signed-out redirect, the menu contents and the badge count.
-- [ ] 9.4 Build `/` Home (balance card, status card, six-step tracker, apply CTA). Verify tests for no application, action needed and declined.
-- [ ] 9.5 Build `/apply`: three steps, `MoneyInput` fields, live estimate, equal-width Back and Continue, verbatim validation errors, the duplicate-application guard, a loading state, then a result. Verify tests for:
+- [x] 9.4 Build `/` Home (balance card, status card, six-step tracker, apply CTA). Verify tests for no application, action needed and declined.
+- [x] 9.5 Build `/apply`: three steps, `MoneyInput` fields, live estimate, equal-width Back and Continue, verbatim validation errors, the duplicate-application guard, a loading state, then a result. Verify tests for:
   - each error;
   - the duplicate guard;
   - Juan's ₱150,000 / 24 months giving "You're approved for ₱150,000";
   - the decision record being unchanged after accept, sign and release.
-- [ ] 9.6 Build `/inbox` (8 per page), `/upload` (type and size errors, valid upload returning to review), `/offer` (disclosure from core `disclosure()`, counter-offer note, acknowledgement gates Accept) and `/sign` (Read opens `DocumentViewer`, the name must match). Verify tests for each inline error, each empty state, the counter-offer note and each success toast.
-- [ ] 9.7 Build `/loan` (labelled as read from core banking (simulated), schedule 12 per page) and `/account`. Verify a schedule paging test and the no-loan empty state.
+- [x] 9.6 Build `/inbox` (8 per page), `/upload` (type and size errors, valid upload returning to review), `/offer` (disclosure from core `disclosure()`, counter-offer note, acknowledgement gates Accept) and `/sign` (Read opens `DocumentViewer`, the name must match). Verify tests for each inline error, each empty state, the counter-offer note and each success toast.
+- [x] 9.7 Build `/loan` (labelled as read from core banking (simulated), schedule 12 per page) and `/account`. Verify a schedule paging test and the no-loan empty state.
 
 ## 10. Integration checks
 

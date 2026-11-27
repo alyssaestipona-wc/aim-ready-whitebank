@@ -21,11 +21,11 @@ steps run from the repo root unless stated.
 
 ## 2. packages/core: shared pure helpers (spec: staff-console and borrower-portal decision and disclosure requirements)
 
-- [ ] 2.1 Add `vitest` and a `test` script to `packages/core`. Verify `pnpm --filter @aim-ready/core test` runs.
-- [ ] 2.2 Implement `toCentavos`, `fromCentavos` and `formatPeso`. Add unit tests for rounding, zero, negative input being rejected, and output with and without decimals. Verify the tests pass.
-- [ ] 2.3 Implement `amortise`, `effectiveRate` and `disclosure`, with TSDoc formulas and rounding rules. Add unit tests that match the prototype's `terms()`/`eir()` figures to the centavo for PL 150,000/24/C and SL 80,000/12/B, plus an invalid-input test (zero or negative term). Verify the tests pass.
-- [ ] 2.4 Implement `filterList` and `paginate`. Add unit tests for range text, the last partial page, an empty result and an out-of-range page clamp. Verify the tests pass.
-- [ ] 2.5 Port `simulateDecision(input, policy)` from `decide` and `scoreOf`. Add unit tests for:
+- [x] 2.1 Add `vitest` and a `test` script to `packages/core`. Verify `pnpm --filter @aim-ready/core test` runs.
+- [x] 2.2 Implement `toCentavos`, `fromCentavos` and `formatPeso`. Add unit tests for rounding, zero, negative input being rejected, and output with and without decimals. Verify the tests pass.
+- [x] 2.3 Implement `monthlyPayment`, `effectiveRate` and `disclosure`, with TSDoc formulas and rounding rules. Add unit tests that match the prototype's `terms()`/`eir()` figures to the centavo for PL 150,000/24/C and SL 80,000/12/B, plus an invalid-input test (zero or negative term). Verify the tests pass.
+- [x] 2.4 Implement `filterList` and `paginate`. Add unit tests for range text, the last partial page, an empty result and an out-of-range page clamp. Verify the tests pass.
+- [x] 2.5 Port `simulateDecision(input, policy)` from `decide` and `scoreOf`. Add unit tests for:
   - a knockout decline;
   - auto-approve at 700 or above;
   - a decline below 600;
@@ -95,7 +95,7 @@ steps run from the repo root unless stated.
 
   Verify tests for reveal, document open, missing documents not being clickable, history paging, the unknown id giving not-found, and compliance seeing no enabled actions.
 - [ ] 5.4 Implement the officer actions (request info, recommend with override and reason-code rules, withdraw, resume draft). Verify tests for no items giving the inline error, an override without a reason giving the inline error, an override of ₱50,000 or more flagged above threshold, and a valid recommendation moving the case to Approval.
-- [ ] 5.5 Build `/approvals` and the approver actions (approve, return, decline, route to committee). Verify tests for the self-approval block, routing to committee above limit or grade, and approval moving the case to Offer with the monthly figure from core `amortise`.
+- [ ] 5.5 Build `/approvals` and the approver actions (approve, return, decline, route to committee). Verify tests for the self-approval block, routing to committee above limit or grade, and approval moving the case to Offer with the monthly figure from core `monthlyPayment`.
 - [ ] 5.6 Build `/applications/new` (assisted application: ID scan, verify, upload, money fields, draft save) and `/intake`, both submitting through `simulateDecision` with policy from the mock tenant config. Verify tests for:
   - the required-field inline error;
   - money formatting;

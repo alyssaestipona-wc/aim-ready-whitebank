@@ -106,7 +106,7 @@ Input-field formatting is UI behaviour and lives in `packages/ui` (D3). Apps con
 Seed amounts are stored as integer centavos.
 
 **Loan math:**
-- `amortise(principal, annualRate, months)`: annuity payment. The result is rounded half-up to the centavo once per instalment, and the last instalment absorbs any rounding remainder.
+- `monthlyPayment(principal, months, monthlyAddOnRatePct)`: the prototype prices with a flat monthly add-on rate per grade, giving principal × (1/n + rate). The result is rounded half-up to the centavo. The total of payments is rounded once from its closed form, and the last instalment absorbs any rounding remainder.
 - `effectiveRate(...)`: bisection on monthly IRR, annualised (ported from the prototype's `eir`).
 - `disclosure(...)`: fee, net proceeds, total of payments and finance charge.
 

@@ -122,9 +122,9 @@ export async function startApproval(id: string): Promise<ActionResult & { next?:
     return fail("You recommended this case. A different approver must decide it.", true)
   }
   if (rc.decision === "decline") {
+    // The automated outcome stays as decided; the human decline is the stage.
     return withCase(id, (s, a) => {
       a.stage = "Declined"
-      a.outcome = "decline"
       a.sla = null
       log(s, r, a, "Confirmed decline; borrower notified with plain-language reasons")
       return ok("Declined. Borrower notified.")
@@ -176,7 +176,6 @@ export async function returnToOfficer(id: string): Promise<ActionResult> {
 export async function declineCase(id: string, reason: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
     a.stage = "Declined"
-    a.outcome = "decline"
     a.sla = null
     a.declineReason = reason
     log(s, role(), a, `Declined by approver: ${reason}`)
@@ -230,7 +229,7 @@ export function checklist(a: Application): Array<[string, boolean, string]> {
 /** Maker submits a signed case for booking, with one idempotency key. */
 export async function submitBooking(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
-    if (a.stage !== "Booking") return fail("Already submitted. Duplicate blocked.", true, "warn")
+    if (a.stage !== "Booking" || a.booking?.status === "failed") return fail("Already submitted. Duplicate blocked.", true, "warn")
     a.booking = { status: "pending", maker: me(role()).name, key: `bk-${a.id}-${randomKeySuffix()}`, attempts: 0 }
     a.stage = "Pending checker"
     log(s, role(), a, `Submitted booking for checker (idempotency key ${a.booking.key})`)
@@ -270,7 +269,8 @@ export async function canCheckBooking(id: string): Promise<ActionResult> {
 /** Checker approves; core creates the loan, or the simulated timeout fails it. */
 export async function checkBooking(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
-    if (!a.booking || !a.offer) return fail("Nothing to book.", true)
+    if (!a.booking || !a.offer || a.stage !== "Pending checker") return fail("Nothing to book.", true)
+    if (a.booking.maker === me(role()).name || role() !== "opssup") return fail("Only a loan operations supervisor who did not prepare this booking can check it.", true)
     a.booking.attempts += 1
     a.booking.checker = me(role()).name
     log(s, role(), a, `Approved booking as checker (maker: ${a.booking.maker})`)
@@ -292,7 +292,7 @@ export async function checkBooking(id: string): Promise<ActionResult> {
 /** Retries a failed booking with the SAME idempotency key. */
 export async function retryBooking(id: string): Promise<ActionResult> {
   return withCase(id, (s, a) => {
-    if (!a.booking || !a.offer) return fail("Nothing to retry.", true)
+    if (!a.booking || !a.offer || a.booking.status !== "failed") return fail("Nothing to retry.", true)
     a.booking.attempts += 1
     bookIt(s, a)
     log(s, role(), a, `Retried booking with the same idempotency key ${a.booking.key}`)
@@ -358,7 +358,7 @@ function newCase(s: StaffState, id: string, o: NewCaseInput, d: DecisionRecord):
   if (d.outcome === "refer") a.owner = "Miguel Ramos"
   if (d.inputs.sanctions) {
     a.aml = "Open"
-    s.amlCases.unshift({ app: id, name: a.name, match: "OFAC SDN list · 92% name match", status: "Open" })
+    s.amlCases.unshift({ tenantId: s.tenantId, app: id, name: a.name, match: "OFAC SDN list · 92% name match", status: "Open" })
   }
   s.apps.unshift(a)
   return a
@@ -459,9 +459,9 @@ export async function uploadPartnerSpreadsheet(): Promise<ActionResult> {
   return update((s) => {
     s.intakeFile = "Cordillera Foods HR · salary loan requests Nov 2026.xlsx"
     const rows: IntakeDraft[] = [
-      { name: "Ramil Ocampo", product: "SL", amount: 5000000, tenor: 12, income: 3200000, age: 29, source: "Partner spreadsheet, row 2", flag: null, status: "Draft" },
-      { name: "Joy Fernandez", product: "SL", amount: 9000000, tenor: 18, income: 4100000, age: 36, source: "Partner spreadsheet, row 3", flag: null, status: "Draft" },
-      { name: "Elmer Sison", product: "SL", amount: 7000000, tenor: 12, income: 3550000, age: 44, source: "Partner spreadsheet, row 4", flag: "Government ID number missing", status: "Draft" },
+      { tenantId: s.tenantId, name: "Ramil Ocampo", product: "SL", amount: 5000000, tenor: 12, income: 3200000, age: 29, source: "Partner spreadsheet, row 2", flag: null, status: "Draft" },
+      { tenantId: s.tenantId, name: "Joy Fernandez", product: "SL", amount: 9000000, tenor: 18, income: 4100000, age: 36, source: "Partner spreadsheet, row 3", flag: null, status: "Draft" },
+      { tenantId: s.tenantId, name: "Elmer Sison", product: "SL", amount: 7000000, tenor: 12, income: 3550000, age: 44, source: "Partner spreadsheet, row 4", flag: "Government ID number missing", status: "Draft" },
     ]
     s.drafts = rows.concat(s.drafts.filter((d) => d.status !== "Draft"))
     log(s, role(), null, "Uploaded partner spreadsheet: 3 rows extracted into drafts")
@@ -471,7 +471,7 @@ export async function uploadPartnerSpreadsheet(): Promise<ActionResult> {
 
 export async function uploadEmailBundle(): Promise<ActionResult> {
   return update((s) => {
-    s.drafts.unshift({ name: "Grace Villamor", product: "PL", amount: 12000000, tenor: 24, income: 5800000, age: 33, source: "Email from g.villamor@… with 3 attachments", flag: null, status: "Draft" })
+    s.drafts.unshift({ tenantId: s.tenantId, name: "Grace Villamor", product: "PL", amount: 12000000, tenor: 24, income: 5800000, age: 33, source: "Email from g.villamor@… with 3 attachments", flag: null, status: "Draft" })
     log(s, role(), null, "Extracted an email bundle into a draft application")
     return ok("Email bundle extracted into a draft")
   })

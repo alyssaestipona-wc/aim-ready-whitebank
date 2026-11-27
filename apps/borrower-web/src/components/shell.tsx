@@ -18,7 +18,7 @@ import {
 
 import { STAFF_WEB_URL } from "@/lib/env"
 import { navigateHard } from "@/lib/navigation"
-import { actions, currentBorrower, myApp, pendingCount, useBankSimulator, useBorrowerState } from "@/mock"
+import { SESSION_COOKIE, actions, currentBorrower, myApp, pendingCount, useBankSimulator, useBorrowerState } from "@/mock"
 
 /** One centred 760px column shared by the header and the page content. */
 export function Column({ className, ...props }: React.ComponentProps<"div">) {
@@ -37,6 +37,10 @@ function Logo() {
   )
 }
 
+function hasSessionCookie(): boolean {
+  return document.cookie.split("; ").some((c) => c.startsWith(`${SESSION_COOKIE}=`) && c.length > SESSION_COOKIE.length + 1)
+}
+
 /**
  * Strip, header and content column for every page. Also runs the simulated
  * bank progression and keeps signed-out browsers on the sign-in page.
@@ -51,6 +55,13 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!state) return
+    // The cookie is the session the server sees. If it has gone (e.g. the
+    // browser restarted) while this browser still remembers a borrower, end
+    // that session here instead of bouncing between "/" and "/sign-in".
+    if (borrower && !hasSessionCookie()) {
+      void actions.signOut()
+      return
+    }
     if (!borrower && pathname !== "/sign-in") router.replace("/sign-in")
     if (borrower && pathname === "/sign-in") navigateHard("/")
   }, [state, borrower, pathname, router])

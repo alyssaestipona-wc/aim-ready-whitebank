@@ -192,7 +192,7 @@ export type DecisionSnapshot = {
   decidedAt: string
 }
 
-export type AuditEntry = { when: string; who: string; role: string; what: string; target: string }
+export type AuditEntry = { tenantId: string; when: string; who: string; role: string; what: string; target: string }
 
 export type RuleSetConfig = {
   pub: string
@@ -216,6 +216,7 @@ export type DecisionConfig = {
 }
 
 export type IntakeDraft = {
+  tenantId: string
   name: string
   product: ProductCode
   amount: Centavos
@@ -228,7 +229,7 @@ export type IntakeDraft = {
   app?: string
 }
 
-export type AmlCase = { app: string | null; name: string; match: string; status: string }
+export type AmlCase = { tenantId: string; app: string | null; name: string; match: string; status: string }
 
 /** [file, period, records, errors, status]. */
 export type CicRow = [string, string, string, number, string]

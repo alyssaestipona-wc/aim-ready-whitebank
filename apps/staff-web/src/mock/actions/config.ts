@@ -36,6 +36,7 @@ export async function generateCic(): Promise<ActionResult> {
 }
 
 export async function fixCic(): Promise<ActionResult> {
+  if (role() === "compliance") return fail("Read-only access", true)
   return update((s) => {
     const f = s.cic[0]
     if (!f) return fail("No file to fix.", true)
@@ -46,6 +47,7 @@ export async function fixCic(): Promise<ActionResult> {
 }
 
 export async function submitCic(): Promise<ActionResult> {
+  if (role() === "compliance") return fail("Read-only access", true)
   return update((s) => {
     const f = s.cic[0]
     if (!f) return fail("No file to submit.", true)

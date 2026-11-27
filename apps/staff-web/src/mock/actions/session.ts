@@ -26,7 +26,7 @@ export async function checkCredentials(email: string, password: string): Promise
 export async function verifyCode(role: RoleKey, code: string): Promise<ActionResult> {
   if (!/^\d{6}$/.test(code.trim())) return fail("That code is incorrect. Try again.")
   update((s) => {
-    s.audit.unshift({ when: now(s), who: USERS[role].name, role: USERS[role].title, what: "Signed in (SSO + MFA)", target: "" })
+    s.audit.unshift({ tenantId: s.tenantId, when: now(s), who: USERS[role].name, role: USERS[role].title, what: "Signed in (SSO + MFA)", target: "" })
   })
   setSessionRole(role)
   setFlagsCookie(getState().flags)
@@ -35,7 +35,7 @@ export async function verifyCode(role: RoleKey, code: string): Promise<ActionRes
 
 export async function signOut(): Promise<ActionResult> {
   const role = getSessionRole()
-  if (role) update((s) => s.audit.unshift({ when: now(s), who: me(role).name, role: me(role).title, what: "Signed out", target: "" }))
+  if (role) update((s) => s.audit.unshift({ tenantId: s.tenantId, when: now(s), who: me(role).name, role: me(role).title, what: "Signed out", target: "" }))
   setSessionRole(null)
   return ok()
 }
@@ -52,7 +52,7 @@ export async function logRefusal(route: string): Promise<ActionResult> {
   const role = getSessionRole()
   if (!role) return ok()
   update((s) => {
-    s.audit.unshift({ when: now(s), who: me(role).name, role: me(role).title, what: `Refused: requested "${route}", outside this role. Blocked at the server, not just hidden in the menu.`, target: "" })
+    s.audit.unshift({ tenantId: s.tenantId, when: now(s), who: me(role).name, role: me(role).title, what: `Refused: requested "${route}", outside this role. Blocked at the server, not just hidden in the menu.`, target: "" })
   })
   return ok()
 }

@@ -428,7 +428,7 @@ function seedDrafts(apps: Application[]): IntakeDraft[] {
   const fi = apps.filter((a) => a.channel === "File intake")
   const src = ["DepEd payroll file, row ", "Metro Hospital HR file, row ", "Cordillera Foods HR file, row "]
   const out: IntakeDraft[] = fi.map((a, i) => ({
-    name: a.name, product: a.product, amount: a.amount, tenor: a.tenor, income: a.income ?? 0, age: a.age ?? 30,
+    tenantId: TENANT_ID, name: a.name, product: a.product, amount: a.amount, tenor: a.tenor, income: a.income ?? 0, age: a.age ?? 30,
     source: `${src[i % 3]}${4 + i} (2${4 + (i % 3)} Nov)`, flag: null, status: "Submitted", app: a.id,
   }))
   const extra: Array<[string, ProductCode, number, number, number, number, string, string | null]> = [
@@ -436,15 +436,15 @@ function seedDrafts(apps: Application[]): IntakeDraft[] {
     ["Erwin Domingo", "PL", 90000, 18, 47000, 37, "Email from e.domingo@… with 3 attachments", "Signed consent form missing"],
     ["Francis Yap", "SL", 30000, 6, 25000, 26, "Metro Hospital HR file, row 19 (27 Nov)", "Government ID number missing"],
   ]
-  for (const r of extra) out.unshift({ name: r[0], product: r[1], amount: r[2], tenor: r[3], income: r[4], age: r[5], source: r[6], flag: r[7], status: "Draft" })
+  for (const r of extra) out.unshift({ tenantId: TENANT_ID, name: r[0], product: r[1], amount: r[2], tenor: r[3], income: r[4], age: r[5], source: r[6], flag: r[7], status: "Draft" })
   return out
 }
 
 function seedAml(): StaffState["amlCases"] {
   return [
-    { app: "APP-2050", name: "Arturo Santos", match: "OFAC SDN list · 94% name match", status: "Open" }, { app: null, name: "Mylene Castillo", match: "Domestic PEP list · mayor’s spouse", status: "Open" }, { app: null, name: "Rolando Bernal", match: "UN sanctions list · 82% name match", status: "Open" }, { app: null, name: "Cynthia Ong", match: "Adverse media · fraud case 2023", status: "Open" },
-    { app: null, name: "Jerome De Leon", match: "UN sanctions list · 71% name match", status: "Cleared: false positive (birth date differs)" }, { app: null, name: "Marvin Tan", match: "OFAC SDN list · 68% name match", status: "Cleared: false positive (nationality differs)" }, { app: null, name: "Lourdes Reyes", match: "Domestic PEP list · barangay captain", status: "Exported to AML system" }, { app: null, name: "Patrick Sy", match: "EU sanctions list · 74% name match", status: "Cleared: false positive (middle name differs)" },
-    { app: null, name: "Joanna Flores", match: "Adverse media · estafa complaint 2024", status: "Exported to AML system" }, { app: null, name: "Rey Villamor", match: "Domestic PEP list · provincial board member", status: "Exported to AML system" }, { app: null, name: "Ana Lim", match: "OFAC SDN list · 66% name match", status: "Cleared: false positive (birth date differs)" }, { app: null, name: "Dennis Uy", match: "UN sanctions list · 70% name match", status: "Cleared: false positive (address differs)" },
+    { tenantId: TENANT_ID, app: "APP-2050", name: "Arturo Santos", match: "OFAC SDN list · 94% name match", status: "Open" }, { tenantId: TENANT_ID, app: null, name: "Mylene Castillo", match: "Domestic PEP list · mayor’s spouse", status: "Open" }, { tenantId: TENANT_ID, app: null, name: "Rolando Bernal", match: "UN sanctions list · 82% name match", status: "Open" }, { tenantId: TENANT_ID, app: null, name: "Cynthia Ong", match: "Adverse media · fraud case 2023", status: "Open" },
+    { tenantId: TENANT_ID, app: null, name: "Jerome De Leon", match: "UN sanctions list · 71% name match", status: "Cleared: false positive (birth date differs)" }, { tenantId: TENANT_ID, app: null, name: "Marvin Tan", match: "OFAC SDN list · 68% name match", status: "Cleared: false positive (nationality differs)" }, { tenantId: TENANT_ID, app: null, name: "Lourdes Reyes", match: "Domestic PEP list · barangay captain", status: "Exported to AML system" }, { tenantId: TENANT_ID, app: null, name: "Patrick Sy", match: "EU sanctions list · 74% name match", status: "Cleared: false positive (middle name differs)" },
+    { tenantId: TENANT_ID, app: null, name: "Joanna Flores", match: "Adverse media · estafa complaint 2024", status: "Exported to AML system" }, { tenantId: TENANT_ID, app: null, name: "Rey Villamor", match: "Domestic PEP list · provincial board member", status: "Exported to AML system" }, { tenantId: TENANT_ID, app: null, name: "Ana Lim", match: "OFAC SDN list · 66% name match", status: "Cleared: false positive (birth date differs)" }, { tenantId: TENANT_ID, app: null, name: "Dennis Uy", match: "UN sanctions list · 70% name match", status: "Cleared: false positive (address differs)" },
   ]
 }
 
@@ -506,8 +506,8 @@ export function seed(): StaffState {
   apps.forEach(enrichHist)
 
   const audit: AuditEntry[] = []
-  for (const a of apps) for (const h of a.hist) audit.push({ when: h.when, who: h.who, role: roleOf(h.who), what: h.what, target: a.id })
-  audit.push({ when: "20 Nov, 16:40", who: "Jonas Mercado", role: "Tenant administrator", what: "Approved and published rule set v4 (maker-checker; drafted by Rafael Cruz)", target: "" })
+  for (const a of apps) for (const h of a.hist) audit.push({ tenantId: TENANT_ID, when: h.when, who: h.who, role: roleOf(h.who), what: h.what, target: a.id })
+  audit.push({ tenantId: TENANT_ID, when: "20 Nov, 16:40", who: "Jonas Mercado", role: "Tenant administrator", what: "Approved and published rule set v4 (maker-checker; drafted by Rafael Cruz)", target: "" })
   audit.sort((x, y) => tOrd(y.when) - tOrd(x.when))
 
   const drafts = seedDrafts(apps).map((d) => ({ ...d, amount: c(d.amount), income: c(d.income) }))

@@ -55,7 +55,7 @@ export default function RegulatoryPage() {
                 x.fresh && x.r[4] === "Ready" ? (
                   x.r[3] ? (
                     <div className="flex gap-1.5">
-                      <Button size="sm" onClick={() => run(fixCic())}>
+                      <Button size="sm" disabled={isReadOnly(role)} title={isReadOnly(role) ? "Read-only access" : undefined} onClick={() => run(fixCic())}>
                         Fix and regenerate
                       </Button>
                       <Button size="sm" disabled title="Resolve the validation errors first">
@@ -63,7 +63,7 @@ export default function RegulatoryPage() {
                       </Button>
                     </div>
                   ) : (
-                    <Button size="sm" variant="primary" onClick={() => run(submitCic())}>
+                    <Button size="sm" variant="primary" disabled={isReadOnly(role)} title={isReadOnly(role) ? "Read-only access" : undefined} onClick={() => run(submitCic())}>
                       Mark submitted
                     </Button>
                   )

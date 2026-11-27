@@ -73,6 +73,14 @@ describe("shell", () => {
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/sign-in"))
   })
 
+  it("ends a remembered session whose cookie is gone instead of looping", async () => {
+    await signInAs("juan")
+    document.cookie = "wbl_borrower_session=; path=/; max-age=0"
+    renderPage(<SignInPage />, "/sign-in")
+    await waitFor(() => expect(store.getState().session).toBeNull())
+    expect(nav.hard).not.toHaveBeenCalled()
+  })
+
   it("has a staff console link and no guided demo", async () => {
     await signInAs("juan")
     renderPage(<HomePage />)

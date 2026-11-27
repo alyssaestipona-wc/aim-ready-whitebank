@@ -61,6 +61,7 @@ export function log(s: StaffState, role: RoleKey | null, a: Application | null |
   const u = who || me(role).name
   if (a) a.hist.push(H(u, what, t))
   s.audit.unshift({
+    tenantId: s.tenantId,
     when: t,
     who: u,
     role: roleLabel || (who ? (who === "System" ? "Decision engine" : roleOf(who)) : me(role).title),

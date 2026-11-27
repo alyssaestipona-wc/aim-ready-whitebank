@@ -32,7 +32,7 @@ The console SHALL ask for email and password first. It SHALL show the authentica
 - **THEN** the approver lands on Approvals, and each other role lands on its own home screen (branch and loan officer: Work queues; loan operations and supervisor: Booking; credit risk: Decisioning dashboard; compliance: Audit log; administrator: Products)
 
 ### Requirement: Staff routes are role-scoped and checked on the server
-Each staff route SHALL be reachable only by the roles the prototype's navigation grants. The sidebar SHALL list only permitted routes. A request for a forbidden route SHALL be refused before the page renders, by a server-side session check, and SHALL show the "You don't have access to this" screen.
+Each staff route SHALL be reachable only by the roles the prototype's navigation grants. The sidebar SHALL list only permitted routes. A request for a forbidden route SHALL be refused before the page renders, by a server-side session check, and SHALL show the "You don’t have access to this" screen.
 
 #### Scenario: Forbidden route by URL
 - **GIVEN** a branch officer is signed in
@@ -47,7 +47,7 @@ Each staff route SHALL be reachable only by the roles the prototype's navigation
 #### Scenario: Compliance is read-only
 - **GIVEN** the compliance role
 - **WHEN** a case, the booking queue or a configuration screen is opened
-- **THEN** the content is visible but every state-changing action is disabled or absent
+- **THEN** the content is visible but every state-changing action is disabled or absent, except revealing a government ID, which is audit-logged as in the prototype
 
 #### Scenario: Compliance exports its own AML escalations
 - **GIVEN** the compliance role on AML escalations, a screen only compliance can open
@@ -78,7 +78,7 @@ The bell SHALL open a dropdown with role-specific notifications, newest first, w
 #### Scenario: Dropdown loads on scroll
 - **GIVEN** more than 10 notifications
 - **WHEN** the dropdown list is scrolled to its end
-- **THEN** 10 more items are appended, with no page buttons, until "You've reached the end" shows
+- **THEN** 10 more items are appended, with no page buttons, until "You’ve reached the end" shows
 
 #### Scenario: Notifications page
 - **GIVEN** the bell dropdown is open
@@ -197,7 +197,7 @@ The decision summary SHALL say that the pipeline is simulated.
 - **THEN** the case is auto-approved to Offer and its decision summary is labelled simulated
 
 ### Requirement: Manual review fallback
-With the kill switch on, or during a simulated bureau outage, a new application SHALL go to manual review instead of being auto-decided.
+With the kill switch on, or during a simulated bureau outage, a new application that passes the policy knockouts SHALL go to manual review instead of being auto-decided. A knockout still declines, as in the prototype.
 
 #### Scenario: Kill switch routes to review
 - **GIVEN** the kill switch is on
@@ -264,7 +264,7 @@ Officers, approvers, credit risk, compliance and administrators SHALL see the or
 #### Scenario: Dashboard opens
 - **GIVEN** credit risk is signed in
 - **WHEN** credit risk opens the decisioning dashboard
-- **THEN** it shows the approve, refer and decline split, override counts and a paginated table, with all bars in the accent colour
+- **THEN** it shows the straight-through and override rates, the approve, refer and decline mix, the top referral triggers and automation by product, with all bars in the accent colour
 
 ### Requirement: Regulatory extract validation
 Credit risk and administrators SHALL be able to generate the monthly credit bureau (CIC) file. A file with validation errors SHALL NOT be markable as submitted until it is fixed and regenerated. Each step SHALL be audit-logged.
@@ -289,8 +289,8 @@ Compliance SHALL see the audit log, consent records, AML escalations, related-pa
 
 #### Scenario: Audit log filter
 - **GIVEN** compliance on the audit log
-- **WHEN** the audit log is filtered by actor
-- **THEN** only that actor's entries are shown, paginated
+- **WHEN** the audit log is filtered by role, or searched for a person's name
+- **THEN** only matching entries are shown, paginated
 
 ### Requirement: Tenant configuration screens
 Credit risk, administrators and compliance SHALL see the configuration screens their role is granted:
@@ -313,7 +313,7 @@ Product parameter and rule-set changes SHALL follow draft, then submit for revie
 #### Scenario: Author cannot publish own rule set
 - **GIVEN** a draft rule set submitted for review by the current user
 - **WHEN** "Approve and publish" is selected
-- **THEN** it is refused with "You submitted this change; a different person must approve it"
+- **THEN** "Approve and publish" is disabled for them with the explanation "You submitted this change; a different person must approve it"
 
 #### Scenario: Second person publishes a product change
 - **GIVEN** a personal-loan draft submitted by credit risk
@@ -323,7 +323,7 @@ Product parameter and rule-set changes SHALL follow draft, then submit for revie
 #### Scenario: Invalid product draft
 - **GIVEN** a product draft whose auto-approval limit exceeds its maximum amount
 - **WHEN** it is submitted for review
-- **THEN** it is refused with "The auto-approval limit can't exceed the maximum amount."
+- **THEN** it is refused with "The auto-approval limit can’t exceed the maximum amount."
 
 ### Requirement: Kill switch is a single-user control
 Per PRD story AIS-7, credit risk SHALL, from the AI models screen's automation controls, turn the global kill switch on or off with one confirmation and set each product's automation mode (live, shadow, off), with no second sign-off. Turning it on SHALL state that applications already decided are unaffected. Both directions SHALL be audit-logged with who and when.

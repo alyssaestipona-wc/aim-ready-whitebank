@@ -102,6 +102,15 @@ describe("approver", () => {
     expect(await startApproval("APP-2043")).toMatchObject({ ok: true, next: "committee" })
   })
 
+  it("keeps the automated outcome when an approver declines", async () => {
+    setup("approver")
+    const { declineCase } = await import("@/mock")
+    await declineCase("APP-2043", "Insufficient verified income")
+    const a = findApp(getState(), "APP-2043")!
+    expect(a.stage).toBe("Declined")
+    expect(a.outcome).toBe("refer")
+  })
+
   it("approves within authority and sends the offer", async () => {
     setup("approver")
     expect(await startApproval("APP-2043")).toMatchObject({ ok: true, next: "confirm" })
@@ -221,6 +230,10 @@ describe("closing and booking", () => {
     a = findApp(getState(), "APP-2054")!
     expect(a.stage).toBe("Disbursed")
     expect(a.booking!.key).toBe(key)
+    // A second retry cannot mint another loan under the same key.
+    const loanNo = a.loanNo
+    expect(await retryBooking("APP-2054")).toMatchObject({ ok: false })
+    expect(findApp(getState(), "APP-2054")!.loanNo).toBe(loanNo)
     expect(a.hist.some((h) => h.what === `Retried booking with the same idempotency key ${key}`)).toBe(true)
   })
 })

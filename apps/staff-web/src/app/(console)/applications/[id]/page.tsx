@@ -77,8 +77,9 @@ export default function CasePage() {
   const record: Array<[string, string]> = [
     ["decision_id", `DR-${a.id.slice(4)}-01`],
     ["outcome", a.decision?.outcome || a.outcome || "not decided"],
-    ["score", a.score == null ? "not scored" : String(a.score)],
-    ["grade", a.grade || "—"],
+    ["score", (a.decision ? a.decision.score : a.score) == null ? "not scored" : String(a.decision ? a.decision.score : a.score)],
+    ["grade", (a.decision ? a.decision.grade : a.grade) || "—"],
+    ["bands", a.bands ? `decline below ${a.bands.decline} · refer ${a.bands.decline}–${a.bands.approve - 1} · approve ${a.bands.approve}+` : "—"],
     ["probability_of_default", a.pd ? `${a.pd}%` : "—"],
     ["rule_set", a.decision?.ruleSetVersion || a.ruleset],
     ["model", a.decision?.modelVersion || a.model],

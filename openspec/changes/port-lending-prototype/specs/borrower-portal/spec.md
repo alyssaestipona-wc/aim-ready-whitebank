@@ -90,7 +90,7 @@ Money fields SHALL format with thousands separators and two decimals. Back and C
 #### Scenario: Submission runs checks
 - **GIVEN** Juan, signed in with no open application, on step 3 with all consents ticked
 - **WHEN** a ₱150,000 / 24-month personal loan is submitted
-- **THEN** a "Just a moment…" loading state shows, then "Application sent" shows "You're approved for ₱150,000". The decision's inputs, rule-set version, model version and outcome are recorded on the application.
+- **THEN** a "Just a moment…" loading state shows, then "Application sent" shows "You’re approved for ₱150,000". The decision's inputs, rule-set version, model version and outcome are recorded on the application.
 
 #### Scenario: Decision record is immutable
 - **GIVEN** a submitted application with its decision record
@@ -146,7 +146,7 @@ The upload page SHALL accept a file only while information is requested. It SHAL
 The offer page SHALL show the amount, the monthly payment and a disclosure statement:
 - amount financed;
 - processing fee;
-- net proceeds;
+- net proceeds (labelled “You receive”);
 - monthly payment;
 - total of payments;
 - finance charge;
@@ -162,10 +162,10 @@ A counter-offer SHALL be marked as one. Accept SHALL stay disabled until the bor
 #### Scenario: Accept offer
 - **GIVEN** the offer page
 - **WHEN** the disclosure is acknowledged and Accept offer is selected
-- **THEN** the borrower returns to Home with a toast "Offer accepted. We'll send your documents to sign."
+- **THEN** the borrower returns to Home with a toast "Offer accepted. We’ll send your documents to sign."
 
 ### Requirement: Electronic signing
-The sign page SHALL list each document with a Read action that opens it in the document viewer. Signing SHALL require the borrower's full name, typed exactly as it appears on the account, and an agreement tick.
+The sign page SHALL list each document with a Read action that opens it in the document viewer. Signing SHALL require the borrower's full name as it appears on the account (ignoring letter case and surrounding spaces) and an agreement tick.
 
 #### Scenario: Name mismatch
 - **GIVEN** documents ready to sign

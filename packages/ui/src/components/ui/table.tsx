@@ -35,7 +35,8 @@ function TableRow({
       onKeyDown={
         onActivate
           ? (e) => {
-              if (e.key === "Enter") onActivate()
+              // Only when the row itself has focus, not a button inside it.
+              if (e.key === "Enter" && e.target === e.currentTarget) onActivate()
             }
           : undefined
       }

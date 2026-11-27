@@ -27,7 +27,7 @@ Success and warning states SHALL use the accent or neutrals, never green or oran
 - **THEN** the message text and the field border are red
 
 ### Requirement: Shared typography
-Apps using the kit SHALL set body text in Geist, and identifiers, amounts in tables and timestamps in Geist Mono.
+Apps using the kit SHALL set body text in Geist and identifiers (case, loan and idempotency keys) in Geist Mono. Amounts use tabular figures.
 
 #### Scenario: Case identifier
 - **GIVEN** a table of cases

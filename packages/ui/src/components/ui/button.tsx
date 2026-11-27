@@ -12,7 +12,6 @@ const buttonVariants = cva(
         primary: "border-ink bg-ink text-white hover:border-ink-3 hover:bg-ink-3",
         accent: "border-brand bg-brand text-white hover:border-brand-700 hover:bg-brand-700",
         danger: "border-g-400 bg-paper text-ink hover:bg-g-100",
-        destructive: "border-danger bg-danger text-white hover:opacity-90",
         ghost: "border-transparent bg-transparent text-strong hover:bg-g-50",
         link: "border-transparent bg-transparent p-0 text-brand-700 underline-offset-4 hover:underline",
       },

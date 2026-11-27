@@ -16,7 +16,7 @@ type ConfirmDialogProps = {
   /** Confirm button label. */
   okLabel?: string
   cancelLabel?: string
-  /** A red destructive confirm button. */
+  /** A destructive confirm: solid ink, as the prototype's `.btn.dan.solid`. */
   danger?: boolean
   /** Hide Cancel (e.g. read-only viewers with a single Close). */
   noCancel?: boolean
@@ -91,7 +91,8 @@ function ConfirmDialog({
               <Button>{cancelLabel}</Button>
             </DialogClose>
           )}
-          <Button variant={danger ? "destructive" : "primary"} disabled={busy} onClick={confirm}>
+          <Button variant="primary"
+            data-danger={danger || undefined} disabled={busy} onClick={confirm}>
             {okLabel}
           </Button>
         </DialogFooter>

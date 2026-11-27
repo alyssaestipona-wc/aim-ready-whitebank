@@ -12,7 +12,7 @@ behave alike without copying components.
 Apps using the kit SHALL render with:
 - near-black and gray neutrals on white;
 - one blue accent, used for primary emphasis, informational badges and all chart bars;
-- red reserved for inline errors and destructive confirmations.
+- red reserved for inline errors.
 
 Success and warning states SHALL use the accent or neutrals, never green or orange.
 
@@ -65,7 +65,7 @@ The kit SHALL provide a peso money input with a ₱ prefix. It SHALL insert thou
 
 ### Requirement: Dialogs, menus and toasts
 The kit SHALL provide:
-- a dialog with a title, a description, an optional body, an inline error area, and confirm and cancel buttons, where a destructive confirm is red;
+- a dialog with a title, a description, an optional body, an inline red error area, and confirm and cancel buttons, where a destructive confirm is solid ink, as in the prototype;
 - a dropdown menu;
 - transient toasts.
 

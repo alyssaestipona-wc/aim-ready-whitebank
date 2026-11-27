@@ -62,9 +62,9 @@ steps run from the repo root unless stated.
 
 ## 4. staff-web: mock layer, sign-in, access control and shell (spec: staff-console sign-in, routes, shell, simulated state)
 
-- [ ] 4.1 Port the seed into `src/mock/seed.ts` from `USERS`, `PRODUCTS`, `seed`, `extendSeed`, `enrichHist`, the seeded drafts, AML, CIC, related-party, campaigns, `FINDINGS`, `HOLIDAYS` and the reason codes. Add types, and set `tenantId` on every record. Store money in centavos. Verify a unit test asserts the per-stage case counts from the seed plan and that every list has more than 10 rows (port of `count.js`).
-- [ ] 4.2 Implement `store.ts` (versioned key, try/catch, memory fallback, reset) and the `@/mock` public index. Verify tests for persistence across store re-creation, reset to seed, and the throwing-localStorage fallback.
-- [ ] 4.3 Implement `src/lib/access.ts` (route-to-role map, landing route per role) and `proxy.ts`, which:
+- [x] 4.1 Port the seed into `src/mock/seed.ts` from `USERS`, `PRODUCTS`, `seed`, `extendSeed`, `enrichHist`, the seeded drafts, AML, CIC, related-party, campaigns, `FINDINGS`, `HOLIDAYS` and the reason codes. Add types, and set `tenantId` on every record. Store money in centavos. Verify a unit test asserts the per-stage case counts from the seed plan and that every list has more than 10 rows (port of `count.js`).
+- [x] 4.2 Implement `store.ts` (versioned key, try/catch, memory fallback, reset) and the `@/mock` public index. Verify tests for persistence across store re-creation, reset to seed, and the throwing-localStorage fallback.
+- [x] 4.3 Implement `src/lib/access.ts` (route-to-role map, landing route per role) and `proxy.ts`, which:
   - redirects signed-out requests to `/sign-in`;
   - rewrites forbidden requests to `/denied`;
   - hides AI model routes when the flag is off.

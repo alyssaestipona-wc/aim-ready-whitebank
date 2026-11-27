@@ -49,7 +49,7 @@ Alternative considered: one app with two route groups. Rejected, because the use
 
 ### D2. Tokens as a shared Tailwind 4 theme stylesheet
 `packages/ui/src/styles/theme.css` holds:
-- the prototype's tokens, mapped to shadcn variable names: `--primary` is ink `#0B0B0C`, `--accent-brand` is `#2B59C3`, `--destructive` is `#C42B1C`, plus the gray ramp, radius and shadows;
+- the prototype's tokens, mapped to shadcn variable names: `--primary` is ink `#0B0B0C`, `--accent-brand` is `#2B59C3`, `--danger` is `#C42B1C` (inline errors only), plus the gray ramp, radius and shadows;
 - the `@theme inline` block;
 - base layer rules.
 

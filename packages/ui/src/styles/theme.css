@@ -3,7 +3,7 @@
  *
  * Palette: near-black ink and zinc grays on white, ONE blue accent ("brand")
  * for emphasis, informational states and every chart bar, and red ("danger")
- * reserved for inline errors and destructive confirmations. Success and
+ * reserved for inline errors. Destructive confirmations are solid ink. Success and
  * warning states use the accent or neutrals, never green or orange.
  *
  * Each app's globals.css imports tailwindcss, tw-animate-css and this file,

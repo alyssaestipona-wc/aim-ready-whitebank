@@ -347,6 +347,7 @@ function newCase(s: StaffState, id: string, o: NewCaseInput, d: DecisionRecord):
     checks: [["eKYC and liveness", "HyperVerge (simulated)", "Pass"], ["AML and sanctions", "LSEG World-Check (simulated)", d.inputs.sanctions ? "Match · escalated" : "Clear"], ["Fraud signals", "SEON (simulated)", "Low risk"], ["Credit bureau", "TransUnion PH (simulated)", d.bureauDown ? "Unavailable" : d.inputs.bureau]],
     stage: d.outcome === "approve" ? "Offer" : d.outcome === "refer" ? "Review" : "Declined",
     sla: d.outcome === "refer" ? 8 : null,
+    bureauDown: d.bureauDown,
     decision: Object.freeze({ outcome: d.outcome, score: d.score, grade: d.grade, trigger: d.trigger, ruleSetVersion: d.ruleSetVersion, modelVersion: d.modelVersion, inputs: Object.freeze({ ...d.inputs }), decidedAt: created }),
     ...o,
   }

@@ -83,9 +83,9 @@ steps run from the repo root unless stated.
 
 ## 5. staff-web: My work and applications (spec: staff-console queues, case detail, officer review, approver, assisted application)
 
-- [ ] 5.1 Build `/queues` (tabs including unassigned, Pick action) and `/sla` (hours-left wording via the `hrsLeft` port). Verify tests for pick ownership with a history entry, and the "1 hour left" singular wording.
-- [ ] 5.2 Build `/applications` with the `appFilters` port (stage, product, channel, owner) and pagination. Verify a paging and filter test.
-- [ ] 5.3 Build `/applications/[id]`:
+- [x] 5.1 Build `/queues` (tabs including unassigned, Pick action) and `/sla` (hours-left wording via the `hrsLeft` port). Verify tests for pick ownership with a history entry, and the "1 hour left" singular wording.
+- [x] 5.2 Build `/applications` with the `appFilters` port (stage, product, channel, owner) and pagination. Verify a paging and filter test.
+- [x] 5.3 Build `/applications/[id]`:
   - the applicant card with masked government ID and a Reveal dialog that logs;
   - the decision summary labelled simulated, with rule-set and model versions;
   - the documents card opening `DocumentViewer`;
@@ -94,9 +94,9 @@ steps run from the repo root unless stated.
   - `notFound()` for unknown ids.
 
   Verify tests for reveal, document open, missing documents not being clickable, history paging, the unknown id giving not-found, and compliance seeing no enabled actions.
-- [ ] 5.4 Implement the officer actions (request info, recommend with override and reason-code rules, withdraw, resume draft). Verify tests for no items giving the inline error, an override without a reason giving the inline error, an override of ₱50,000 or more flagged above threshold, and a valid recommendation moving the case to Approval.
-- [ ] 5.5 Build `/approvals` and the approver actions (approve, return, decline, route to committee). Verify tests for the self-approval block, routing to committee above limit or grade, and approval moving the case to Offer with the monthly figure from core `monthlyPayment`.
-- [ ] 5.6 Build `/applications/new` (assisted application: ID scan, verify, upload, money fields, draft save) and `/intake`, both submitting through `simulateDecision` with policy from the mock tenant config. Verify tests for:
+- [x] 5.4 Implement the officer actions (request info, recommend with override and reason-code rules, withdraw, resume draft). Verify tests for no items giving the inline error, an override without a reason giving the inline error, an override of ₱50,000 or more flagged above threshold, and a valid recommendation moving the case to Approval.
+- [x] 5.5 Build `/approvals` and the approver actions (approve, return, decline, route to committee). Verify tests for the self-approval block, routing to committee above limit or grade, and approval moving the case to Offer with the monthly figure from core `monthlyPayment`.
+- [x] 5.6 Build `/applications/new` (assisted application: ID scan, verify, upload, money fields, draft save) and `/intake`, both submitting through `simulateDecision` with policy from the mock tenant config. Verify tests for:
   - the required-field inline error;
   - money formatting;
   - the kill switch giving Review;
@@ -106,9 +106,9 @@ steps run from the repo root unless stated.
 
 ## 6. staff-web: closing and booking (spec: staff-console maker-checker booking)
 
-- [ ] 6.1 Build `/signing` (generate documents, resend, disclosure preview) with filters and pagination. Verify a test that generate moves the case to awaiting signature.
-- [ ] 6.2 Build `/booking` (pre-booking checklist, maker submit with an idempotency key, supervisor check) and `/disbursements`. Verify tests for a duplicate submit being blocked, the maker-as-checker block logged, a non-supervisor refused, a successful booking creating a loan number, compliance seeing the booking queue with no enabled actions, and the "simulated on the client" maker-checker notice being shown.
-- [ ] 6.3 Build `/exceptions`, sorted by `failedAt`, with retry using the same key. Verify a test where the core-timeout drill fails the booking, then retry books it with the same key.
+- [x] 6.1 Build `/signing` (generate documents, resend, disclosure preview) with filters and pagination. Verify a test that generate moves the case to awaiting signature.
+- [x] 6.2 Build `/booking` (pre-booking checklist, maker submit with an idempotency key, supervisor check) and `/disbursements`. Verify tests for a duplicate submit being blocked, the maker-as-checker block logged, a non-supervisor refused, a successful booking creating a loan number, compliance seeing the booking queue with no enabled actions, and the "simulated on the client" maker-checker notice being shown.
+- [x] 6.3 Build `/exceptions`, sorted by `failedAt`, with retry using the same key. Verify a test where the core-timeout drill fails the booking, then retry books it with the same key.
 
 ## 7. staff-web: reports and compliance (spec: staff-console reports, compliance views)
 

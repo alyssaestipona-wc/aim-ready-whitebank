@@ -170,6 +170,8 @@ export type Application = {
   offerSent?: string
   declineReason?: string
   withdrawReason?: string
+  /** The bureau was unavailable when the case was decided. */
+  bureauDown?: boolean
   /**
    * The immutable decision record produced when the application was
    * submitted (inputs, rule-set and model versions, outcome). Absent on

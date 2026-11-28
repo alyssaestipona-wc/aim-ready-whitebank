@@ -16,6 +16,7 @@ const LIST_ITEM = {
   outcome: "approve",
   grade: "A",
   assigneeId: null,
+  slaHoursLeft: null,
 }
 
 const DETAIL = {
@@ -30,6 +31,9 @@ const DETAIL = {
   purpose: "Home improvement",
   stage: "Offer",
   assigneeId: null,
+  slaHoursLeft: null,
+  infoRequestItems: null,
+  infoRequestMessage: null,
   decision: {
     outcome: "approve",
     score: 720,
@@ -212,5 +216,82 @@ describe("approve/decline on a referred application", () => {
     mockFetchOnce(200, { ok: false, error: "This application is above your delegated authority (limit ₱1,000,000.00, grades A–C)." })
     await userEvent.click(screen.getByRole("button", { name: "Approve" }))
     await waitFor(() => expect(screen.getByText(/above your delegated authority/)).toBeInTheDocument())
+  })
+})
+
+describe("SLA display", () => {
+  it("flags a breached application in the list", async () => {
+    setup("officer", "/live-applications")
+    mockFetchOnce(200, [{ ...LIST_ITEM, slaHoursLeft: -3 }])
+    renderWithToasts(<LiveApplicationsPage />)
+    await waitFor(() => expect(screen.getByText(/breached/)).toBeInTheDocument())
+  })
+
+  it("shows hours left on the detail screen", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, { ...DETAIL, slaHoursLeft: 36 })
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByText(/36h left/)).toBeInTheDocument())
+  })
+})
+
+describe("request and resolve information", () => {
+  it("shows the request-information form to an officer on a Review-stage application", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send request" })).toBeInTheDocument())
+  })
+
+  it("refuses to send with no items chosen", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send request" })).toBeInTheDocument())
+    await userEvent.click(screen.getByRole("button", { name: "Send request" }))
+    expect(screen.getByText("Choose at least one item to request.")).toBeInTheDocument()
+  })
+
+  it("sends a request with at least one item and a message, then refetches", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send request" })).toBeInTheDocument())
+
+    await userEvent.click(screen.getByText("Bank statements, last 3 months"))
+    await userEvent.type(screen.getByLabelText("Message to borrower"), "Please upload your statements.")
+
+    mockFetchOnce(200, { ok: true })
+    mockFetchOnce(200, { ...REVIEW_DETAIL, stage: "Info requested" })
+    await userEvent.click(screen.getByRole("button", { name: "Send request" }))
+    await waitFor(() => expect(screen.getByRole("button", { name: "Mark resolved" })).toBeInTheDocument())
+  })
+
+  it("shows Mark resolved to an officer on an Info-requested application, and resolves it", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, {
+      ...REVIEW_DETAIL,
+      stage: "Info requested",
+      infoRequestItems: ["ri1"],
+      infoRequestMessage: "Please upload your statements.",
+    })
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Mark resolved" })).toBeInTheDocument())
+    expect(screen.getByText("Please upload your statements.")).toBeInTheDocument()
+    expect(screen.getByText("Bank statements, last 3 months")).toBeInTheDocument()
+
+    mockFetchOnce(200, { ok: true })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    await userEvent.click(screen.getByRole("button", { name: "Mark resolved" }))
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Mark resolved" })).not.toBeInTheDocument())
+  })
+
+  it("does not show request/resolve actions to a non-officer role", async () => {
+    setup("approver", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, { ...REVIEW_DETAIL, stage: "Info requested" })
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByText("Application app-1")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: "Send request" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Mark resolved" })).not.toBeInTheDocument()
   })
 })

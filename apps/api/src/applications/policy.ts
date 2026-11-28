@@ -1,5 +1,7 @@
 import { toCentavos, type DecisionPolicy, type Grade } from '@aim-ready/core';
 
+import type { ApplicationStage } from './application.entity';
+
 export type ProductCode = 'PL' | 'SL';
 
 export type Product = {
@@ -137,3 +139,31 @@ export const GRADE_RATE: Record<Grade, number> = {
   D: 1.7,
   E: 1.9,
 };
+
+/**
+ * Seeded per-stage SLA duration, in hours. `'Info requested'` is lifted
+ * verbatim from the simulated console's own `requestInfo()` handler
+ * (`apps/backoffice/src/mock/actions/cases.ts`'s `a.sla = 72`) - the one
+ * real value that exists anywhere in this codebase. `Review` has no real
+ * precedent to lift (the mock's own seeded SLA values are random per row,
+ * not a formula) - 48 hours is a seeded placeholder default, not a lifted
+ * real value, same as every other seeded constant in this file; the
+ * Configuration epic's own future change replaces it with real tenant data.
+ * A stage with no entry here (Offer/Declined/Disbursed/Withdrawn) reports
+ * no SLA.
+ */
+export const SLA_HOURS: Partial<Record<ApplicationStage, number>> = {
+  Review: 48,
+  'Info requested': 72,
+};
+
+/**
+ * Re-exported from `@aim-ready/contracts` - the single shared source of
+ * truth for this checklist, so apps/api's validation whitelist and
+ * apps/backoffice's real request-info checklist UI can never silently
+ * drift apart (each used to keep its own independent copy).
+ */
+export {
+  INFO_REQUEST_ITEMS,
+  INFO_REQUEST_ITEM_IDS,
+} from '@aim-ready/contracts';

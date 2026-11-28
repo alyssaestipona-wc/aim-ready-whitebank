@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Card, ListView, PageHeader, Tabs, TabsList, TabsTrigger, useToast, type ListColumn, type ListFilterDef } from "@aim-ready/ui"
+import { Badge, Button, Card, ListView, PageHeader, Tabs, TabsList, TabsTrigger, useToast, type ListColumn, type ListFilterDef } from "@aim-ready/ui"
 import { formatPeso } from "@aim-ready/core"
 import type { StaffApplicationListItem } from "@aim-ready/contracts"
 import { useRouter } from "next/navigation"
@@ -16,12 +16,21 @@ const STAGE_FILTER: ListFilterDef<StaffApplicationListItem> = {
   label: "Stage",
   options: [
     ["Review", "Review"],
+    ["Info requested", "Info requested"],
     ["Offer", "Offer"],
     ["Declined", "Declined"],
     ["Disbursed", "Disbursed"],
     ["Withdrawn", "Withdrawn"],
   ],
   test: (item, value) => item.stage === value,
+}
+
+/** Matches the simulated console's own breach (<0) and warning (<=2h) thresholds. */
+function SlaCell({ hours }: { hours: number | null }) {
+  if (hours === null) return <span>—</span>
+  if (hours < 0) return <Badge variant="bad">{hours}h (breached)</Badge>
+  if (hours <= 2) return <Badge variant="warn">{hours}h left</Badge>
+  return <span>{hours}h left</span>
 }
 
 const PRODUCT_FILTER: ListFilterDef<StaffApplicationListItem> = {
@@ -111,6 +120,7 @@ export default function LiveApplicationsPage() {
     { header: "Stage", cell: (a) => a.stage },
     { header: "Outcome", cell: (a) => a.outcome },
     { header: "Grade", cell: (a) => a.grade ?? "—" },
+    { header: "SLA", cell: (a) => <SlaCell hours={a.slaHoursLeft} /> },
     ...(tab === "unassigned" && canPick
       ? [
           {

@@ -18,6 +18,8 @@ import {
   ApplicationsService,
   type DecideApplicationResult,
   type PickApplicationResult,
+  type RequestInfoResult,
+  type ResolveInfoResult,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from './applications.service';
@@ -25,6 +27,7 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { CloseApplicationDto } from './dto/close-application.dto';
 import { ListApplicationsDto } from './dto/list-applications.dto';
 import { DecideApplicationDto } from './dto/decide-application.dto';
+import { RequestInfoDto } from './dto/request-info.dto';
 
 const STAFF_ROLES = [
   'branch',
@@ -102,6 +105,36 @@ export class ApplicationsController {
   ): Promise<PickApplicationResult> {
     const user = req.user!;
     return this.applications.pick(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
+    );
+  }
+
+  @Patch(':id/request-info')
+  @Roles('officer')
+  @HttpCode(200)
+  requestInfo(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+    @Body() dto: RequestInfoDto,
+  ): Promise<RequestInfoResult> {
+    const user = req.user!;
+    return this.applications.requestInfo(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/resolve-info')
+  @Roles('officer')
+  @HttpCode(200)
+  resolveInfo(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+  ): Promise<ResolveInfoResult> {
+    const user = req.user!;
+    return this.applications.resolveInfo(
       { sub: user.sub, tenantId: user.tenantId },
       id,
     );

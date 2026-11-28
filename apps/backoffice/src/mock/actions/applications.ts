@@ -2,11 +2,17 @@ import {
   decideApplicationRequestSchema,
   decideApplicationResponseSchema,
   pickApplicationResponseSchema,
+  requestInfoRequestSchema,
+  requestInfoResponseSchema,
+  resolveInfoResponseSchema,
   staffApplicationDetailSchema,
   staffApplicationListResponseSchema,
   type DecideApplicationRequest,
   type DecideApplicationResponse,
   type PickApplicationResponse,
+  type RequestInfoRequest,
+  type RequestInfoResponse,
+  type ResolveInfoResponse,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from "@aim-ready/contracts"
@@ -118,6 +124,54 @@ export async function pickApplication(id: string): Promise<Result<PickApplicatio
     return { ok: false, error: UNAVAILABLE_ERROR }
   }
   const parsed = pickApplicationResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
+  return { ok: true, data: parsed.data }
+}
+
+export async function requestInfo(
+  id: string,
+  dto: RequestInfoRequest,
+): Promise<Result<RequestInfoResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+  const requestParsed = requestInfoRequestSchema.safeParse(dto)
+  if (!requestParsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/request-info`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(requestParsed.data),
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = requestInfoResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
+  return { ok: true, data: parsed.data }
+}
+
+export async function resolveInfo(id: string): Promise<Result<ResolveInfoResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/resolve-info`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = resolveInfoResponseSchema.safeParse(body)
   if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
   if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
   return { ok: true, data: parsed.data }

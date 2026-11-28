@@ -147,6 +147,7 @@ export const staffApplicationListItemSchema = z.object({
   outcome: z.string().min(1),
   grade: z.string().min(1).nullable(),
   assigneeId: z.string().min(1).nullable(),
+  slaHoursLeft: z.number().nullable(),
 })
 export type StaffApplicationListItem = z.infer<typeof staffApplicationListItemSchema>
 
@@ -168,6 +169,9 @@ export const staffApplicationDetailSchema = z.object({
   decision: z.unknown(),
   createdAt: z.string().min(1),
   assigneeId: z.string().min(1).nullable(),
+  slaHoursLeft: z.number().nullable(),
+  infoRequestItems: z.array(z.string().min(1)).nullable(),
+  infoRequestMessage: z.string().min(1).nullable(),
   consents: z.array(z.object({
     kind: z.string().min(1),
     capturedAt: z.string().min(1),
@@ -202,3 +206,36 @@ export const pickApplicationResponseSchema = z.union([
   z.object({ ok: z.literal(false), error: z.string().min(1) }),
 ])
 export type PickApplicationResponse = z.infer<typeof pickApplicationResponseSchema>
+
+export const requestInfoRequestSchema = z.object({
+  items: z.array(z.string().min(1)).min(1),
+  message: z.string().min(1),
+})
+export type RequestInfoRequest = z.infer<typeof requestInfoRequestSchema>
+
+export const requestInfoResponseSchema = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), error: z.string().min(1) }),
+])
+export type RequestInfoResponse = z.infer<typeof requestInfoResponseSchema>
+
+export const resolveInfoResponseSchema = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), error: z.string().min(1) }),
+])
+export type ResolveInfoResponse = z.infer<typeof resolveInfoResponseSchema>
+
+/**
+ * The one seeded checklist for requesting information from a borrower -
+ * single source of truth for both apps/api's `@IsIn` validation whitelist
+ * and apps/backoffice's real (not simulated) request-info checklist UI, so
+ * the two can never silently drift apart. Labels lifted verbatim from the
+ * simulated console's own `INFO_ITEMS` (apps/backoffice/src/mock/actions/
+ * cases.ts) at the time this was written.
+ */
+export const INFO_REQUEST_ITEMS = [
+  ["ri1", "Bank statements, last 3 months"],
+  ["ri2", "Certificate of employment"],
+  ["ri3", "Latest income tax return"],
+] as const
+export const INFO_REQUEST_ITEM_IDS = INFO_REQUEST_ITEMS.map(([id]) => id)

@@ -3,7 +3,7 @@ schema: spec-driven
 context: |
   AIM READY is a pnpm/Turborepo monorepo.
   Stack: Node 22, NestJS 11, TypeScript, TypeORM 0.3 on PostgreSQL 15+, Jest (apps/api).
-  Stack: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Vitest, ESLint 9 (apps/web).
+  Stack: Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Vitest, ESLint 9 (apps/web, apps/backoffice).
   Shared code lives in packages/ (core, contracts, base, ui) and must not depend on app code.
   Specs are stored flat at openspec/specs/<capability>/spec.md.
 

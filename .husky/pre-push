@@ -1,0 +1,12 @@
+set -e
+
+# Mirrors .github/workflows/ci.yml's Lint/Typecheck/Build/Test steps, scoped to
+# what actually changed since main plus everything that depends on it — turbo
+# resolves the workspace graph, so a change in e.g. packages/core also checks
+# every app that imports it.
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+  pnpm turbo run lint typecheck build test --filter='...[origin/main]'
+else
+  echo "pre-push: origin/main not found locally (fresh clone?) — running full checks instead of a scoped diff"
+  pnpm turbo run lint typecheck build test
+fi

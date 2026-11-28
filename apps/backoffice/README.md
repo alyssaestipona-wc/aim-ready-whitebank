@@ -1,4 +1,4 @@
-# staff-web
+# backoffice
 
 The WhiteBank Lending staff console for Kalinaw Bank: sign-in, work queues,
 case review, approvals, maker-checker booking, reports, compliance views and
@@ -16,8 +16,8 @@ recorded in OpenSpec change `port-lending-prototype` and ADR-0003.
   cookie holding the role. `src/proxy.ts` checks it on the server against the
   route map in `src/lib/access.ts`. This keeps route access server-side, but
   it is **not authentication**. It is replaced when `apps/api` auth lands.
-- **Disconnected from borrower-web.** The two apps have separate mock stores.
-  An application a borrower submits in `borrower-web` does not appear here.
+- **Disconnected from web.** The two apps have separate mock stores.
+  An application a borrower submits in `web` does not appear here.
 - **Simulated maker-checker.** Maker-checker, authority limits and
   segregation of duties are enforced in the mock layer on the client. The real
   enforcement belongs in `apps/api`.
@@ -25,15 +25,15 @@ recorded in OpenSpec change `port-lending-prototype` and ADR-0003.
 ## Run
 
 ```bash
-pnpm --filter staff-web dev   # http://localhost:3001
-pnpm --filter staff-web test
+pnpm --filter backoffice dev   # http://localhost:3001
+pnpm --filter backoffice test
 ```
 
 ## Environment variables
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_BORROWER_WEB_URL` | `http://localhost:3002` | Target of the "Borrower web app" link in the top strip. |
+| `NEXT_PUBLIC_WEB_URL` | `http://localhost:3002` | Target of the "Borrower web app" link in the top strip. |
 
 ## Demo accounts
 

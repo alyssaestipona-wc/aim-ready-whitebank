@@ -42,7 +42,8 @@ Do not skip steps. Do not start writing implementation code before a proposal ha
 ## Where things live
 
 - `apps/api` — NestJS 11 backend (Node 22, TypeORM 0.3, PostgreSQL 15+, Jest).
-- `apps/web` — Next.js 16 frontend (React 19, Tailwind CSS 4, shadcn/ui, Vitest).
+- `apps/web` — Next.js 16 borrower app (React 19, Tailwind CSS 4, shadcn/ui, Vitest). Mock-data-only prototype per ADR-0003/ADR-0004.
+- `apps/backoffice` — Next.js 16 staff console (same stack as `apps/web`). Mock-data-only prototype per ADR-0003/ADR-0004.
 - `packages/core` — shared domain logic. No app-specific code.
 - `packages/contracts` — shared types/DTOs/schemas used across `apps/api` and `apps/web`. Change these only when the API contract is actually changing.
 - `packages/base` — shared `tsconfig`/`eslint` config. Apps and packages extend this, they don't redefine it.

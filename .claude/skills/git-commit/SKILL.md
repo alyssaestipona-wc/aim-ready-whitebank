@@ -29,7 +29,7 @@ This is the most important step. The goal is commits that tell a coherent story 
 **Split into separate commits when:**
 - Files belong to clearly different concerns (e.g., a new feature AND a bug fix AND a docs update)
 - Mixing them would make the commit message dishonest or vague (e.g., you'd have to write "feat: add auth and also fix typo and update config")
-- Files span workspaces that aren't actually related (e.g., an unrelated `apps/api` fix and an `apps/staff-web` feature landing in the same working tree by coincidence)
+- Files span workspaces that aren't actually related (e.g., an unrelated `apps/api` fix and an `apps/backoffice` feature landing in the same working tree by coincidence)
 
 **Default to fewer commits.** If you're unsure whether to split, group them. A single well-named commit is better than three commits that each only make sense together.
 
@@ -54,16 +54,15 @@ Use exactly one prefix per commit, written `<type>(<scope>): <description>` or `
 | Scope | Workspace |
 |---|---|
 | `api` | `apps/api` |
-| `borrower-web` | `apps/borrower-web` |
-| `staff-web` | `apps/staff-web` |
 | `web` | `apps/web` |
+| `backoffice` | `apps/backoffice` |
 | `ui` | `packages/ui` |
 | `core` | `packages/core` |
 | `contracts` | `packages/contracts` |
 | `openspec` | `openspec/**` (proposals, specs, archiving) |
 
-- A commit touching one workspace: `fix(staff-web): ...`
-- A commit touching a few, related workspaces: comma-join them in the order they matter most, e.g. `fix(staff-web,borrower-web): ...`
+- A commit touching one workspace: `fix(backoffice): ...`
+- A commit touching a few, related workspaces: comma-join them in the order they matter most, e.g. `fix(backoffice,web): ...`
 - A commit touching the repo broadly (root config, `AGENTS.md`, cross-cutting refactors) or more than ~3 workspaces: omit the scope, e.g. `fix: address spec review round 3`
 
 ## Step 4 — Write the commit message
@@ -94,9 +93,9 @@ Then display the plan with the stat output inline:
 ```
 Proposed commits:
 
-1. fix(staff-web): refuse resubmitting a draft case under review
-   Files: apps/staff-web/src/cases/case.service.ts
-          apps/staff-web/src/cases/case.service.spec.ts
+1. fix(backoffice): refuse resubmitting a draft case under review
+   Files: apps/backoffice/src/cases/case.service.ts
+          apps/backoffice/src/cases/case.service.spec.ts
    Changes:
      case.service.ts       | 18 +++++++++++
      case.service.spec.ts  | 24 +++++++++++++++

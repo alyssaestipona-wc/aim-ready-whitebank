@@ -1,7 +1,7 @@
 # 2. Monorepo layout and dependency direction
 
 ## Status
-Accepted
+Accepted. Its `apps/web`/`apps/admin`/`apps/backoffice` naming is superseded by ADR-0004.
 
 ## Context
 Multiple apps (`apps/api`, `apps/web`, future `apps/admin`, `apps/backoffice`) share domain logic, types, tooling config, and UI components. Without a rule, that shared code gets duplicated or, worse, apps start depending on each other directly.

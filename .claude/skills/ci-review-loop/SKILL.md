@@ -458,7 +458,7 @@ Call `ScheduleWakeup` with `delaySeconds: $nextPoll` and `reason: "no changes fr
 Stage and commit directly — **do not invoke the `git-commit` skill** (it has interactive confirmation steps that block automation). Apply its conventions inline:
 
 - One commit per fix type (install, lint, typecheck, build, test). Don't bundle unrelated fix types into a single commit.
-- Conventional Commits format, scoped to the workspace(s) touched (`api`, `borrower-web`, `staff-web`, `web`, `ui`, `core`, `contracts`) per the `git-commit` skill's scope table, e.g. `fix(staff-web): ...`. Omit the scope only if the fix is genuinely repo-wide.
+- Conventional Commits format, scoped to the workspace(s) touched (`api`, `web`, `backoffice`, `ui`, `core`, `contracts`) per the `git-commit` skill's scope table, e.g. `fix(backoffice): ...`. Omit the scope only if the fix is genuinely repo-wide.
 - **The subject must describe what was actually fixed** — not a round number or generic phrase:
   - ✅ `fix(api): null-check the case lookup before updating its status`
   - ✅ `fix(ui): import @testing-library/jest-dom/vitest instead of the plain entrypoint`

@@ -9,7 +9,7 @@ export type SessionRole = AccessRole | "opssup"
 
 export type RouteKey =
   | "queues" | "sla" | "approvals"
-  | "apps" | "new-app" | "intake"
+  | "apps" | "new-app" | "intake" | "live-apps"
   | "signing" | "booking" | "disbursements" | "exceptions"
   | "dash-funnel" | "dash-sla" | "dash-decision" | "dash-reg"
   | "audit" | "consent" | "aml" | "related" | "governance"
@@ -36,6 +36,7 @@ export const NAV: NavGroup[] = [
       { key: "apps", label: "All applications", path: "/applications", roles: ["branch", "officer", "approver", "compliance"] },
       { key: "new-app", label: "New assisted application", path: "/applications/new", roles: ["branch", "officer"] },
       { key: "intake", label: "Email and file intake", path: "/intake", roles: ["branch", "officer", "compliance"] },
+      { key: "live-apps", label: "Real applications", path: "/live-applications", roles: ["branch", "officer", "approver", "ops", "compliance", "risk"] },
     ],
   },
   {
@@ -116,6 +117,8 @@ export function matchRoute(pathname: string): RouteMatch | null {
   if (exact) return { key: exact.key, label: exact.label, group: NAV.find((g) => g.items.includes(exact))?.group ?? null }
   const caseMatch = /^\/applications\/([^/]+)$/.exec(p)
   if (caseMatch) return { key: "case", label: "All applications", group: "Applications", param: decodeURIComponent(caseMatch[1] as string) }
+  const liveCaseMatch = /^\/live-applications\/([^/]+)$/.exec(p)
+  if (liveCaseMatch) return { key: "live-case", label: "Real applications", group: "Applications", param: decodeURIComponent(liveCaseMatch[1] as string) }
   const productMatch = /^\/config\/products\/([^/]+)$/.exec(p)
   if (productMatch) return { key: "product", label: "Products", group: "Configuration", param: decodeURIComponent(productMatch[1] as string) }
   const templateMatch = /^\/config\/templates\/([^/]+)$/.exec(p)
@@ -129,7 +132,7 @@ export function matchRoute(pathname: string): RouteMatch | null {
  */
 export function allowed(role: SessionRole, key: string, flags: { ai: boolean } = { ai: true }): boolean {
   const r = baseOf(role)
-  if (key === "case") return CASE_ROLES.includes(r)
+  if (key === "case" || key === "live-case") return CASE_ROLES.includes(r)
   if (key === "product") return PRODUCT_ROLES.includes(r)
   if (key === "template") return TEMPLATE_ROLES.includes(r)
   if (key === "notifications" || key === "denied") return true
@@ -164,6 +167,7 @@ export function hrefFor(target: string, role: SessionRole, flags: { ai: boolean 
   const [key, param] = target.split(":") as [string, string | undefined]
   if (!allowed(role, key, flags)) return null
   if (key === "case") return `/applications/${param}`
+  if (key === "live-case") return `/live-applications/${param}`
   if (key === "product") return `/config/products/${param}`
   if (key === "template") return `/config/templates/${param}`
   if (key === "booking" && param) return `/booking?case=${encodeURIComponent(param)}`

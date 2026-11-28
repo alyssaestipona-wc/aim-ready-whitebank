@@ -80,6 +80,11 @@ describe("proxy", () => {
     expect(rewriteTo(proxy(req("/applications/APP-2041", "officer")))).toBeNull()
   })
 
+  it("lets the real applications screen and its detail page through for every case role", () => {
+    expect(rewriteTo(proxy(req("/live-applications", "officer")))).toBeNull()
+    expect(rewriteTo(proxy(req("/live-applications/app-1", "officer")))).toBeNull()
+  })
+
   it("refuses AI models for everyone when the module flag is off", () => {
     expect(rewriteTo(proxy(req("/config/models", "risk", "ai")))).toBeNull()
     expect(rewriteTo(proxy(req("/config/models", "risk", "")))).toContain("/denied")

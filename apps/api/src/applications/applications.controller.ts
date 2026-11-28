@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Param,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 
@@ -12,9 +14,24 @@ import type { CreateApplicationResponse } from '@aim-ready/contracts';
 
 import type { RequestWithSession } from '../auth/guards/session-role.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { ApplicationsService } from './applications.service';
+import {
+  ApplicationsService,
+  type StaffApplicationDetail,
+  type StaffApplicationListItem,
+} from './applications.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { CloseApplicationDto } from './dto/close-application.dto';
+import { ListApplicationsDto } from './dto/list-applications.dto';
+
+const STAFF_ROLES = [
+  'branch',
+  'officer',
+  'approver',
+  'ops',
+  'opssup',
+  'risk',
+  'compliance',
+] as const;
 
 @Controller('applications')
 @Roles('borrower')
@@ -32,6 +49,26 @@ export class ApplicationsController {
       { sub: user.sub, tenantId: user.tenantId },
       dto,
     );
+  }
+
+  @Get()
+  @Roles(...STAFF_ROLES)
+  list(
+    @Req() req: RequestWithSession,
+    @Query() query: ListApplicationsDto,
+  ): Promise<StaffApplicationListItem[]> {
+    const user = req.user!;
+    return this.applications.findAllForTenant(user.tenantId, query);
+  }
+
+  @Get(':id')
+  @Roles(...STAFF_ROLES)
+  detail(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+  ): Promise<StaffApplicationDetail> {
+    const user = req.user!;
+    return this.applications.findOneForTenant(user.tenantId, id);
   }
 
   @Patch(':id/close')

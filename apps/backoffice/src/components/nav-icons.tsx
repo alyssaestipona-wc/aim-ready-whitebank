@@ -7,7 +7,7 @@ import type { RouteKey } from "@/lib/access"
 
 /** Sidebar icon per route, matching the prototype's RICON map. */
 export const NAV_ICON: Record<RouteKey, LucideIcon> = {
-  queues: Inbox, sla: Clock, approvals: Check, apps: FileText, "new-app": Plus, intake: Upload,
+  queues: Inbox, sla: Clock, approvals: Check, apps: FileText, "new-app": Plus, intake: Upload, "live-apps": FileText,
   signing: PenLine, booking: BookOpen, disbursements: Send, exceptions: TriangleAlert,
   "dash-funnel": ChartColumn, "dash-sla": Clock, "dash-decision": ChartColumn, "dash-reg": FileText,
   audit: List, consent: ShieldCheck, aml: ShieldAlert, related: LinkIcon, governance: Cpu,

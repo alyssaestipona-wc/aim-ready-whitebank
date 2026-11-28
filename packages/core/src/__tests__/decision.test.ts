@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { simulateDecision, toCentavos, type DecisionInput, type DecisionPolicy } from "../index";
+import { aiRecommendation, simulateDecision, toCentavos, type DecisionInput, type DecisionPolicy } from "../index";
 
 // Seeded tenant configuration from the prototype's baseCfg(); tests pass it in
 // explicitly because core never defaults policy.
@@ -128,5 +128,40 @@ describe("simulateDecision", () => {
 
   it("throws when a product has no configured limit", () => {
     expect(() => simulateDecision({ ...juan, product: "HL" }, policy())).toThrow(RangeError);
+  });
+});
+
+describe("aiRecommendation", () => {
+  it("recommends approve at the applied amount when under the income cap", () => {
+    const d = simulateDecision(juan, policy({ bands: { approve: 760, decline: 600 } }));
+    expect(d.outcome).toBe("refer");
+    // income ₱68,000 × 1.9 = ₱129,200 -> floored to ₱120,000; a ₱90,000 request stays under that cap
+    const rec = aiRecommendation(d, toCentavos(90000), 24, toCentavos(68000));
+    expect(rec).toEqual({ decision: "approve", amount: toCentavos(90000), tenor: 24 });
+  });
+
+  it("caps the recommended amount at income × 1.9, rounded down to the nearest ₱10,000", () => {
+    const d = simulateDecision(juan, policy({ bands: { approve: 760, decline: 600 } }));
+    // income ₱68,000 × 1.9 = ₱129,200 -> floored to ₱120,000
+    const rec = aiRecommendation(d, toCentavos(500000), 24, toCentavos(68000));
+    expect(rec).toEqual({ decision: "approve", amount: toCentavos(120000), tenor: 24 });
+  });
+
+  it("floors the recommended amount at ₱10,000 even for a very low income", () => {
+    const d = simulateDecision(juan, policy({ bands: { approve: 760, decline: 600 } }));
+    const rec = aiRecommendation(d, toCentavos(150000), 24, toCentavos(1000));
+    expect(rec).toEqual({ decision: "approve", amount: toCentavos(10000), tenor: 24 });
+  });
+
+  it("returns null for a decline outcome", () => {
+    const d = simulateDecision({ ...juan, age: 19 }, policy());
+    expect(d.outcome).toBe("decline");
+    expect(aiRecommendation(d, toCentavos(150000), 24, toCentavos(68000))).toBeNull();
+  });
+
+  it("returns null for an auto-approved outcome - it never reaches a recommend/decide flow", () => {
+    const d = simulateDecision(juan, policy());
+    expect(d.outcome).toBe("approve");
+    expect(aiRecommendation(d, toCentavos(150000), 24, toCentavos(68000))).toBeNull();
   });
 });

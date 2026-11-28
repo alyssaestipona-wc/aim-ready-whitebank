@@ -52,4 +52,12 @@ describe('ApplicationsController roles', () => {
     expect(rolesOf(proto.requestInfo)).toEqual(['officer']);
     expect(rolesOf(proto.resolveInfo)).toEqual(['officer']);
   });
+
+  it('restricts recommend to the officer role only, not every staff role', () => {
+    expect(rolesOf(proto.recommend)).toEqual(['officer']);
+  });
+
+  it('restricts returnToOfficer to the approver role only, not every staff role', () => {
+    expect(rolesOf(proto.returnToOfficer)).toEqual(['approver']);
+  });
 });

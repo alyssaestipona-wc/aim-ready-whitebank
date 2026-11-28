@@ -382,3 +382,22 @@ export function simulateDecision(x: DecisionInput, policy: DecisionPolicy): Deci
     inputs: { ...x },
   });
 }
+
+export type AiRecommendation = { decision: "approve"; amount: Centavos; tenor: number };
+
+/**
+ * The AI's own implicit recommendation for a referred application - ported
+ * from the mock console's `aiRecOf()`/`aiAmount()`. Always "approve", at an
+ * amount capped by income (floor ₱10,000, ceiling the applicant's monthly
+ * income × 1.9, rounded down to the nearest ₱10,000). `null` for anything
+ * other than a referred (`refer`) outcome: an auto-approved application
+ * never goes through recommend/decide (it's already at `Offer`), and a
+ * knockout/score decline never does either - neither has an implicit
+ * recommendation to show.
+ */
+export function aiRecommendation(decision: DecisionRecord, appliedAmount: Centavos, appliedTenor: number, income: Centavos): AiRecommendation | null {
+  if (decision.outcome !== "refer") return null;
+  const cap = Math.floor((income * 1.9) / 1000000) * 1000000;
+  const amount = Math.max(1000000, Math.min(appliedAmount, cap));
+  return { decision: "approve", amount, tenor: appliedTenor };
+}

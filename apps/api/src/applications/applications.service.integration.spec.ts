@@ -7,8 +7,10 @@ import {
 import { DataSource, Repository } from 'typeorm';
 
 import { UserEntity } from '../users/user.entity';
+import { TenantConfigEntity } from '../tenant-config/tenant-config.entity';
+import { TenantConfigService } from '../tenant-config/tenant-config.service';
 import { BorrowerProfileEntity } from './borrower-profile.entity';
-import { ApplicationEntity } from './application.entity';
+import { ApplicationEntity, type Recommendation } from './application.entity';
 import { ConsentEntity } from './consent.entity';
 import { ApplicationsService } from './applications.service';
 import type { CreateApplicationDto } from './dto/create-application.dto';
@@ -16,6 +18,8 @@ import {
   APPROVER_AUTHORITY,
   DECLINE_REASON_CODES,
   INFO_REQUEST_ITEM_IDS,
+  OVERRIDE_REASON_CODES,
+  OVERRIDE_THRESHOLD,
   SLA_HOURS,
 } from './policy';
 
@@ -31,6 +35,8 @@ describe('ApplicationsService (integration)', () => {
   let consents: Repository<ConsentEntity>;
   let profiles: Repository<BorrowerProfileEntity>;
   let users: Repository<UserEntity>;
+  let tenantConfigRepo: Repository<TenantConfigEntity>;
+  let tenantConfig: TenantConfigService;
   let service: ApplicationsService;
 
   const TENANT_ID = 'kalinaw';
@@ -64,6 +70,7 @@ describe('ApplicationsService (integration)', () => {
         ApplicationEntity,
         ConsentEntity,
         BorrowerProfileEntity,
+        TenantConfigEntity,
       ],
       synchronize: false,
     });
@@ -72,11 +79,14 @@ describe('ApplicationsService (integration)', () => {
     consents = dataSource.getRepository(ConsentEntity);
     profiles = dataSource.getRepository(BorrowerProfileEntity);
     users = dataSource.getRepository(UserEntity);
+    tenantConfigRepo = dataSource.getRepository(TenantConfigEntity);
+    tenantConfig = new TenantConfigService(tenantConfigRepo);
     service = new ApplicationsService(
       applications,
       consents,
       profiles,
       dataSource,
+      tenantConfig,
     );
   });
 
@@ -123,6 +133,12 @@ describe('ApplicationsService (integration)', () => {
       }),
     );
     borrowerId = user.id;
+    // Reset the shared tenant_config row, since DEC-7's kill-switch/bureau-
+    // down tests toggle it and must never leak into an unrelated test.
+    await tenantConfigRepo.update(
+      { tenantId: TENANT_ID },
+      { killSwitch: false, bureauDown: false },
+    );
     await profiles.save(
       profiles.create({
         userId: borrowerId,
@@ -286,6 +302,55 @@ describe('ApplicationsService (integration)', () => {
     expect(stored?.stage).toBe('Declined');
   });
 
+  it('refers a submission above the product auto-approval limit, with no knockout', async () => {
+    // Personal loan auto-limit is ₱200,000 (policy.ts); within the product's
+    // own ₱500,000 max, so this clears every validation check but still
+    // trips the "limit" referral trigger.
+    const result = await service.create(
+      user(),
+      validDto({ amount: 25_000_000 }),
+    );
+    if (!result.ok) throw new Error('expected success');
+    expect(result.decision.outcome).toBe('refer');
+    expect(result.decision.trigger).toContain(
+      'Amount above auto-approval limit',
+    );
+    const stored = await applications.findOne({
+      where: { id: result.applicationId },
+    });
+    expect(stored?.stage).toBe('Review');
+  });
+
+  it('refers every new submission to manual review once the kill switch is on', async () => {
+    await tenantConfig.set(TENANT_ID, { killSwitch: true });
+    const result = await service.create(user(), validDto());
+    if (!result.ok) throw new Error('expected success');
+    expect(result.decision.outcome).toBe('refer');
+    expect(result.decision.trigger).toContain(
+      'Kill switch on: all new cases to manual review',
+    );
+  });
+
+  it('refers every new submission to manual review while the bureau is marked down', async () => {
+    await tenantConfig.set(TENANT_ID, { bureauDown: true });
+    const result = await service.create(user(), validDto());
+    if (!result.ok) throw new Error('expected success');
+    expect(result.decision.outcome).toBe('refer');
+    expect(result.decision.trigger).toContain(
+      'Credit bureau unavailable: routed to manual review',
+    );
+  });
+
+  it('leaves an already-decided application unaffected by a later kill-switch toggle', async () => {
+    const result = await service.create(user(), validDto());
+    if (!result.ok) throw new Error('expected success');
+    await tenantConfig.set(TENANT_ID, { killSwitch: true });
+    const stored = await applications.findOne({
+      where: { id: result.applicationId },
+    });
+    expect(stored?.decision.outcome).toBe('approve');
+  });
+
   it("leaves a persisted decision record unchanged after the application's stage changes later", async () => {
     const result = await service.create(user(), validDto());
     if (!result.ok) throw new Error('expected success');
@@ -348,6 +413,7 @@ describe('ApplicationsService (integration)', () => {
       consents,
       brokenProfiles,
       dataSource,
+      tenantConfig,
     );
     await expect(
       brokenService.create(user(), validDto()),
@@ -409,6 +475,38 @@ describe('ApplicationsService (integration)', () => {
       ]);
     });
 
+    it('returns no AI recommendation for an auto-approved application', async () => {
+      const result = await service.create(user(), validDto());
+      if (!result.ok) throw new Error('expected success');
+      expect(result.decision.outcome).toBe('approve');
+      const detail = await service.findOneForTenant(
+        TENANT_ID,
+        result.applicationId,
+      );
+      expect(detail.aiRecommendation).toBeNull();
+    });
+
+    it('returns an AI recommendation for a referred application', async () => {
+      // Amount above the PL auto-approval limit trips the "limit" referral
+      // trigger with no knockout, same fixture as the earlier refer-path test.
+      const result = await service.create(
+        user(),
+        validDto({ amount: 25_000_000 }),
+      );
+      if (!result.ok) throw new Error('expected success');
+      expect(result.decision.outcome).toBe('refer');
+      const detail = await service.findOneForTenant(
+        TENANT_ID,
+        result.applicationId,
+      );
+      // income ₱68,000 × 1.9 = ₱129,200 -> floored to ₱120,000, below the ₱250,000 applied
+      expect(detail.aiRecommendation).toEqual({
+        decision: 'approve',
+        amount: 12_000_000,
+        tenor: 24,
+      });
+    });
+
     it("refuses another tenant's application the same way as a missing one", async () => {
       const result = await service.create(user(), validDto());
       if (!result.ok) throw new Error('expected success');
@@ -426,6 +524,7 @@ describe('ApplicationsService (integration)', () => {
         consents,
         profiles,
         dataSource,
+        tenantConfig,
       );
       await expect(
         brokenService.findAllForTenant(user(), {}),
@@ -441,6 +540,7 @@ describe('ApplicationsService (integration)', () => {
         consents,
         profiles,
         dataSource,
+        tenantConfig,
       );
       await expect(
         brokenService.findOneForTenant(
@@ -458,7 +558,12 @@ describe('ApplicationsService (integration)', () => {
   });
 
   describe('decide', () => {
-    const referred = (over: Partial<ApplicationEntity> = {}) =>
+    const RECOMMENDER_ID = '55555555-5555-5555-5555-555555555555';
+
+    const recommended = (
+      over: Partial<ApplicationEntity> = {},
+      recOver: Partial<Recommendation> = {},
+    ) =>
       applications.save(
         applications.create({
           tenantId: TENANT_ID,
@@ -469,14 +574,25 @@ describe('ApplicationsService (integration)', () => {
           income: 6_800_000,
           obligations: 750_000,
           purpose: 'Home improvement',
-          stage: 'Review' as const,
+          stage: 'Approval' as const,
           decision: { outcome: 'refer', grade: 'A' } as never,
           ...over,
+          recommendation: {
+            by: RECOMMENDER_ID,
+            decision: 'approve',
+            amount: 15_000_000,
+            tenor: 24,
+            reasonCode: null,
+            overrideLevel: null,
+            note: null,
+            recommendedAt: new Date().toISOString(),
+            ...recOver,
+          },
         }),
       );
 
     it('approves within authority, recording the reviewer and returning the monthly repayment', async () => {
-      const app = await referred();
+      const app = await recommended();
       const result = await service.decide(user(), app.id, {
         decision: 'approve',
       });
@@ -489,19 +605,22 @@ describe('ApplicationsService (integration)', () => {
       expect(stored?.reviewerId).toBe(borrowerId);
     });
 
-    it('refuses to approve above the amount limit, leaving the application in Review', async () => {
-      const app = await referred({ amount: APPROVER_AUTHORITY.limit + 1 });
+    it('refuses to approve above the amount limit, leaving the application in Approval', async () => {
+      const app = await recommended(
+        {},
+        { amount: APPROVER_AUTHORITY.limit + 1 },
+      );
       const result = await service.decide(user(), app.id, {
         decision: 'approve',
       });
       expect(result.ok).toBe(false);
       const stored = await applications.findOne({ where: { id: app.id } });
-      expect(stored?.stage).toBe('Review');
+      expect(stored?.stage).toBe('Approval');
       expect(stored?.reviewerId).toBeNull();
     });
 
     it('refuses to approve a grade outside the allowed grades', async () => {
-      const app = await referred({
+      const app = await recommended({
         decision: { outcome: 'refer', grade: 'D' } as never,
       });
       const result = await service.decide(user(), app.id, {
@@ -509,11 +628,11 @@ describe('ApplicationsService (integration)', () => {
       });
       expect(result.ok).toBe(false);
       const stored = await applications.findOne({ where: { id: app.id } });
-      expect(stored?.stage).toBe('Review');
+      expect(stored?.stage).toBe('Approval');
     });
 
     it('refuses to approve a null grade', async () => {
-      const app = await referred({
+      const app = await recommended({
         decision: { outcome: 'refer', grade: null } as never,
       });
       const result = await service.decide(user(), app.id, {
@@ -523,15 +642,59 @@ describe('ApplicationsService (integration)', () => {
     });
 
     it('approves exactly at the amount limit (inclusive boundary)', async () => {
-      const app = await referred({ amount: APPROVER_AUTHORITY.limit });
+      const app = await recommended({}, { amount: APPROVER_AUTHORITY.limit });
       const result = await service.decide(user(), app.id, {
         decision: 'approve',
       });
       expect(result.ok).toBe(true);
     });
 
+    it("uses the recommended amount and tenor, not the application's own, for the monthly repayment", async () => {
+      const directApproval = await service.decide(
+        user(),
+        (await recommended()).id,
+        { decision: 'approve' },
+      );
+      const counterApproval = await service.decide(
+        user(),
+        (
+          await recommended(
+            { productCode: 'SL' }, // distinct product - avoids the open-application unique index colliding with the first recommended() call above
+            { decision: 'counter', amount: 9_000_000, tenor: 12 },
+          )
+        ).id,
+        { decision: 'approve' },
+      );
+      if (
+        !directApproval.ok ||
+        directApproval.stage !== 'Offer' ||
+        !counterApproval.ok ||
+        counterApproval.stage !== 'Offer'
+      ) {
+        throw new Error('expected both approvals to succeed');
+      }
+      // ₱150,000/24 months and ₱90,000/12 months must price differently.
+      expect(counterApproval.monthlyPayment).not.toBe(
+        directApproval.monthlyPayment,
+      );
+    });
+
+    it('refuses to approve own recommendation (segregation of duties)', async () => {
+      const app = await recommended({}, { by: borrowerId });
+      const result = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      expect(result).toEqual({
+        ok: false,
+        error:
+          'You recommended this case. A different approver must decide it.',
+      });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Approval');
+    });
+
     it('refuses a second, concurrent decide on the same application', async () => {
-      const app = await referred();
+      const app = await recommended();
       const [first, second] = await Promise.allSettled([
         service.decide(user(), app.id, { decision: 'approve' }),
         service.decide(user(), app.id, {
@@ -554,7 +717,7 @@ describe('ApplicationsService (integration)', () => {
     });
 
     it('declines with a valid reason code, recording the reviewer and the code', async () => {
-      const app = await referred();
+      const app = await recommended();
       const reasonCode = DECLINE_REASON_CODES[0];
       const result = await service.decide(user(), app.id, {
         decision: 'decline',
@@ -568,17 +731,17 @@ describe('ApplicationsService (integration)', () => {
     });
 
     it('refuses to decline with a missing reason code', async () => {
-      const app = await referred();
+      const app = await recommended();
       const result = await service.decide(user(), app.id, {
         decision: 'decline',
       });
       expect(result.ok).toBe(false);
       const stored = await applications.findOne({ where: { id: app.id } });
-      expect(stored?.stage).toBe('Review');
+      expect(stored?.stage).toBe('Approval');
     });
 
     it('refuses to decline with an invalid reason code', async () => {
-      const app = await referred();
+      const app = await recommended();
       const result = await service.decide(user(), app.id, {
         decision: 'decline',
         reasonCode: 'Not a real reason',
@@ -586,15 +749,29 @@ describe('ApplicationsService (integration)', () => {
       expect(result.ok).toBe(false);
     });
 
-    it('refuses to decide an application not in Review', async () => {
-      const app = await referred({ stage: 'Offer' as const });
+    it('refuses to decide an application not in Approval', async () => {
+      const app = await applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: null,
+        }),
+      );
       await expect(
         service.decide(user(), app.id, { decision: 'approve' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it("refuses to decide another tenant's application, same as a missing one", async () => {
-      const app = await referred();
+      const app = await recommended();
       await expect(
         service.decide(
           { sub: borrowerId, tenantId: 'another-tenant' },
@@ -613,12 +790,283 @@ describe('ApplicationsService (integration)', () => {
         consents,
         profiles,
         dataSource,
+        tenantConfig,
       );
       await expect(
         brokenService.decide(user(), '11111111-1111-1111-1111-111111111111', {
           decision: 'approve',
         }),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
+  describe('recommend', () => {
+    const OFFICER_ID = '66666666-6666-6666-6666-666666666666';
+    // income ₱68,000 × 1.9 = ₱129,200, floored to ₱120,000 -> the AI's own
+    // recommended amount for every fixture in this block (applied ₱150,000).
+    const AI_AMOUNT = 12_000_000;
+
+    const review = (over: Partial<ApplicationEntity> = {}) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          assigneeId: OFFICER_ID,
+          ...over,
+        }),
+      );
+
+    it('needs no reason code when approving at the originally applied amount, under the AI cap', async () => {
+      // "approve" always normalizes to the application's own originally
+      // applied amount/tenor (same as the simulated console's recommend()) -
+      // this only coincides with the AI's own capped recommendation when
+      // the applied amount was already under that cap, as it is here
+      // (₱90,000 applied, ₱120,000 cap).
+      const app = await review({ amount: 9_000_000 });
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        { decision: 'approve', amount: 9_000_000, tenor: 24 },
+      );
+      expect(result).toEqual({
+        ok: true,
+        stage: 'Approval',
+        overrideLevel: null,
+      });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Approval');
+      expect(stored?.assigneeId).toBeNull();
+      expect(stored?.recommendation).toMatchObject({
+        by: OFFICER_ID,
+        decision: 'approve',
+        amount: 9_000_000,
+        tenor: 24,
+        reasonCode: null,
+        overrideLevel: null,
+      });
+    });
+
+    it('needs a reason code when approving at the originally applied amount above the AI cap', async () => {
+      // ₱150,000 applied, but the AI caps its own recommendation at
+      // ₱120,000 - "approve" still normalizes to the original ₱150,000, so
+      // this is an override even though the officer picked "approve", not
+      // "counter".
+      const app = await review();
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        { decision: 'approve', amount: 15_000_000, tenor: 24 },
+      );
+      expect(result.ok).toBe(false);
+    });
+
+    it('refuses a differing recommendation with no reason code', async () => {
+      const app = await review();
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        { decision: 'counter', amount: 9_000_000, tenor: 24 },
+      );
+      expect(result.ok).toBe(false);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+    });
+
+    it('classifies a gap at or above the ₱50,000 threshold as above', async () => {
+      const app = await review();
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        {
+          decision: 'counter',
+          amount: AI_AMOUNT - OVERRIDE_THRESHOLD,
+          tenor: 24,
+          reasonCode: OVERRIDE_REASON_CODES[0],
+        },
+      );
+      expect(result).toMatchObject({ ok: true, overrideLevel: 'above' });
+    });
+
+    it('classifies a smaller gap as below', async () => {
+      const app = await review();
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        {
+          decision: 'counter',
+          amount: AI_AMOUNT - 2_000_000,
+          tenor: 24,
+          reasonCode: OVERRIDE_REASON_CODES[0],
+        },
+      );
+      expect(result).toMatchObject({ ok: true, overrideLevel: 'below' });
+    });
+
+    it('always classifies a decision flip as above, regardless of amount', async () => {
+      const app = await review();
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        {
+          decision: 'decline',
+          tenor: 24,
+          reasonCode: OVERRIDE_REASON_CODES[0],
+        },
+      );
+      expect(result).toMatchObject({ ok: true, overrideLevel: 'above' });
+    });
+
+    it('refuses a recommendation from anyone but the owning officer', async () => {
+      const app = await review();
+      const result = await service.recommend(
+        { sub: 'someone-else', tenantId: TENANT_ID },
+        app.id,
+        { decision: 'approve', amount: AI_AMOUNT, tenor: 24 },
+      );
+      expect(result.ok).toBe(false);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+    });
+
+    it('refuses an amount outside the product bounds', async () => {
+      const app = await review();
+      const result = await service.recommend(
+        { sub: OFFICER_ID, tenantId: TENANT_ID },
+        app.id,
+        { decision: 'counter', amount: 600_000_000, tenor: 24 },
+      );
+      expect(result.ok).toBe(false);
+    });
+
+    it('refuses to recommend an application not in Review', async () => {
+      const app = await review({ stage: 'Offer' as const });
+      await expect(
+        service.recommend({ sub: OFFICER_ID, tenantId: TENANT_ID }, app.id, {
+          decision: 'approve',
+          amount: AI_AMOUNT,
+          tenor: 24,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('lets exactly one of two concurrent recommendations win', async () => {
+      // Applied amount under the AI cap, so "approve" needs no reason code
+      // and both concurrent calls reach the actual race at the UPDATE layer.
+      const app = await review({ amount: 9_000_000 });
+      const [first, second] = await Promise.all([
+        service.recommend({ sub: OFFICER_ID, tenantId: TENANT_ID }, app.id, {
+          decision: 'approve',
+          amount: 9_000_000,
+          tenor: 24,
+        }),
+        service.recommend({ sub: OFFICER_ID, tenantId: TENANT_ID }, app.id, {
+          decision: 'approve',
+          amount: 9_000_000,
+          tenor: 24,
+        }),
+      ]);
+      const won = [first, second].filter((r) => r.ok);
+      expect(won).toHaveLength(1);
+    });
+
+    it('throws a distinct failure when the application store is unreachable', async () => {
+      const brokenApplications = {
+        findOne: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+        tenantConfig,
+      );
+      await expect(
+        brokenService.recommend(
+          { sub: OFFICER_ID, tenantId: TENANT_ID },
+          '11111111-1111-1111-1111-111111111111',
+          { decision: 'approve', amount: AI_AMOUNT, tenor: 24 },
+        ),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
+  describe('returnToOfficer', () => {
+    const RECOMMENDER_ID = '55555555-5555-5555-5555-555555555555';
+
+    const inApproval = (over: Partial<ApplicationEntity> = {}) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Approval' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: {
+            by: RECOMMENDER_ID,
+            decision: 'approve',
+            amount: 15_000_000,
+            tenor: 24,
+            reasonCode: null,
+            overrideLevel: null,
+            note: null,
+            recommendedAt: new Date().toISOString(),
+          },
+          ...over,
+        }),
+      );
+
+    it('returns the application to Review, reassigned to the recommending officer', async () => {
+      const app = await inApproval();
+      const result = await service.returnToOfficer(user(), app.id);
+      expect(result).toEqual({ ok: true });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+      expect(stored?.assigneeId).toBe(RECOMMENDER_ID);
+      expect(stored?.recommendation).toBeNull();
+    });
+
+    it('refuses to return an application not in Approval', async () => {
+      const app = await applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: null,
+        }),
+      );
+      await expect(
+        service.returnToOfficer(user(), app.id),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("refuses to return another tenant's application, same as a missing one", async () => {
+      const app = await inApproval();
+      await expect(
+        service.returnToOfficer(
+          { sub: borrowerId, tenantId: 'another-tenant' },
+          app.id,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -744,6 +1192,7 @@ describe('ApplicationsService (integration)', () => {
         consents,
         profiles,
         dataSource,
+        tenantConfig,
       );
       await expect(
         brokenService.pick(user(), '11111111-1111-1111-1111-111111111111'),
@@ -883,6 +1332,7 @@ describe('ApplicationsService (integration)', () => {
         consents,
         profiles,
         dataSource,
+        tenantConfig,
       );
       await expect(
         brokenService.requestInfo(

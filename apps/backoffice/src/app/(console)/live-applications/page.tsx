@@ -17,6 +17,7 @@ const STAGE_FILTER: ListFilterDef<StaffApplicationListItem> = {
   options: [
     ["Review", "Review"],
     ["Info requested", "Info requested"],
+    ["Approval", "Approval"],
     ["Offer", "Offer"],
     ["Declined", "Declined"],
     ["Disbursed", "Disbursed"],

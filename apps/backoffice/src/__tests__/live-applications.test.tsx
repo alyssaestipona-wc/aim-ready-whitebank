@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -34,6 +34,11 @@ const DETAIL = {
   slaHoursLeft: null,
   infoRequestItems: null,
   infoRequestMessage: null,
+  recommendation: null,
+  aiRecommendation: null,
+  reviewerId: null,
+  declineReasonCode: null,
+  decidedAt: null,
   decision: {
     outcome: "approve",
     score: 720,
@@ -54,7 +59,23 @@ const DETAIL = {
   ],
 }
 
-const REVIEW_DETAIL = { ...DETAIL, stage: "Review" }
+const REVIEW_DETAIL = { ...DETAIL, stage: "Review", assigneeId: "officer", aiRecommendation: { decision: "approve", amount: 15_000_000, tenor: 24 } }
+
+const APPROVAL_DETAIL = {
+  ...DETAIL,
+  stage: "Approval",
+  aiRecommendation: { decision: "approve", amount: 15_000_000, tenor: 24 },
+  recommendation: {
+    by: "officer",
+    decision: "approve",
+    amount: 15_000_000,
+    tenor: 24,
+    reasonCode: null,
+    overrideLevel: null,
+    note: null,
+    recommendedAt: "2026-11-28T06:00:00.000Z",
+  },
+}
 
 function mockFetchOnce(status: number, body: unknown) {
   vi.mocked(fetch).mockImplementationOnce(
@@ -147,13 +168,14 @@ describe("real application detail", () => {
   })
 })
 
-describe("approve/decline on a referred application", () => {
-  it("shows Approve/Decline to an approver while the application is in Review", async () => {
+describe("approve/decline/return on a recommended application", () => {
+  it("shows Approve/Decline/Return to an approver while the application is in Approval", async () => {
     setup("approver", "/live-applications/app-1", "", { id: "app-1" })
-    mockFetchOnce(200, REVIEW_DETAIL)
+    mockFetchOnce(200, APPROVAL_DETAIL)
     renderWithToasts(<LiveApplicationDetailPage />)
     await waitFor(() => expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument())
     expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Return to officer" })).toBeInTheDocument()
   })
 
   it("hides the actions once the application is already decided", async () => {
@@ -167,15 +189,32 @@ describe("approve/decline on a referred application", () => {
 
   it("hides the actions from a non-approver role", async () => {
     setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, APPROVAL_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByText("Application app-1")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument()
+  })
+
+  it("hides the actions while the application has no recommendation yet (Review stage)", async () => {
+    setup("approver", "/live-applications/app-1", "", { id: "app-1" })
     mockFetchOnce(200, REVIEW_DETAIL)
     renderWithToasts(<LiveApplicationDetailPage />)
     await waitFor(() => expect(screen.getByText("Application app-1")).toBeInTheDocument())
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument()
   })
 
+  it("shows the officer's recommendation before deciding", async () => {
+    setup("approver", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, APPROVAL_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByText("Officer recommendation")).toBeInTheDocument())
+    const card = screen.getByText("Officer recommendation").closest("div")!
+    expect(within(card).getByText(/Approve ₱150,000 \/ 24 months/)).toBeInTheDocument()
+  })
+
   it("approves and refetches the application, now showing Offer", async () => {
     setup("approver", "/live-applications/app-1", "", { id: "app-1" })
-    mockFetchOnce(200, REVIEW_DETAIL)
+    mockFetchOnce(200, APPROVAL_DETAIL)
     renderWithToasts(<LiveApplicationDetailPage />)
     await waitFor(() => expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument())
 
@@ -187,7 +226,7 @@ describe("approve/decline on a referred application", () => {
 
   it("requires a reason before declining", async () => {
     setup("approver", "/live-applications/app-1", "", { id: "app-1" })
-    mockFetchOnce(200, REVIEW_DETAIL)
+    mockFetchOnce(200, APPROVAL_DETAIL)
     renderWithToasts(<LiveApplicationDetailPage />)
     await waitFor(() => expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument())
     await userEvent.click(screen.getByRole("button", { name: "Decline" }))
@@ -196,7 +235,7 @@ describe("approve/decline on a referred application", () => {
 
   it("declines with a chosen reason and refetches, now showing Declined", async () => {
     setup("approver", "/live-applications/app-1", "", { id: "app-1" })
-    mockFetchOnce(200, REVIEW_DETAIL)
+    mockFetchOnce(200, APPROVAL_DETAIL)
     renderWithToasts(<LiveApplicationDetailPage />)
     await waitFor(() => expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument())
 
@@ -207,15 +246,85 @@ describe("approve/decline on a referred application", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Decline" })).not.toBeInTheDocument())
   })
 
+  it("refuses to approve own recommendation inline, without a network call", async () => {
+    setup("approver", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, { ...APPROVAL_DETAIL, recommendation: { ...APPROVAL_DETAIL.recommendation, by: "approver" } })
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument())
+    const callsBefore = vi.mocked(fetch).mock.calls.length
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }))
+    expect(screen.getByText("You recommended this case. A different approver must decide it.")).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore)
+  })
+
   it("shows the server's refusal when the decide request is above authority", async () => {
     setup("approver", "/live-applications/app-1", "", { id: "app-1" })
-    mockFetchOnce(200, REVIEW_DETAIL)
+    mockFetchOnce(200, APPROVAL_DETAIL)
     renderWithToasts(<LiveApplicationDetailPage />)
     await waitFor(() => expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument())
 
     mockFetchOnce(200, { ok: false, error: "This application is above your delegated authority (limit ₱1,000,000.00, grades A–C)." })
     await userEvent.click(screen.getByRole("button", { name: "Approve" }))
     await waitFor(() => expect(screen.getByText(/above your delegated authority/)).toBeInTheDocument())
+  })
+
+  it("returns the application to the officer and refetches, now showing Review", async () => {
+    setup("approver", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, APPROVAL_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Return to officer" })).toBeInTheDocument())
+
+    mockFetchOnce(200, { ok: true })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    await userEvent.click(screen.getByRole("button", { name: "Return to officer" }))
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Return to officer" })).not.toBeInTheDocument())
+  })
+})
+
+describe("recommend a decision", () => {
+  it("shows the recommend form to the owning officer on a Review-stage application", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send recommendation" })).toBeInTheDocument())
+    expect(screen.getByText(/AI recommendation: approve ₱150,000 \/ 24 months/)).toBeInTheDocument()
+  })
+
+  it("does not show the recommend form to a non-owning staff user", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, { ...REVIEW_DETAIL, assigneeId: "someone-else" })
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByText("Application app-1")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: "Send recommendation" })).not.toBeInTheDocument()
+  })
+
+  it("refuses a differing recommendation with no reason code, inline, without a network call", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send recommendation" })).toBeInTheDocument())
+
+    await userEvent.selectOptions(screen.getByLabelText("Recommendation"), "counter")
+    const amountInput = screen.getByLabelText("Recommended amount")
+    await userEvent.clear(amountInput)
+    await userEvent.type(amountInput, "90000")
+
+    const callsBefore = vi.mocked(fetch).mock.calls.length
+    await userEvent.click(screen.getByRole("button", { name: "Send recommendation" }))
+    expect(screen.getByText("This differs from the AI recommendation. Choose a reason code.")).toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore)
+  })
+
+  it("sends a recommendation and refetches, now showing Approval", async () => {
+    setup("officer", "/live-applications/app-1", "", { id: "app-1" })
+    mockFetchOnce(200, REVIEW_DETAIL)
+    renderWithToasts(<LiveApplicationDetailPage />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send recommendation" })).toBeInTheDocument())
+
+    mockFetchOnce(200, { ok: true, stage: "Approval", overrideLevel: null })
+    mockFetchOnce(200, APPROVAL_DETAIL)
+    await userEvent.click(screen.getByRole("button", { name: "Send recommendation" }))
+    await waitFor(() => expect(screen.getByText("Officer recommendation")).toBeInTheDocument())
   })
 })
 

@@ -154,6 +154,27 @@ export type StaffApplicationListItem = z.infer<typeof staffApplicationListItemSc
 export const staffApplicationListResponseSchema = z.array(staffApplicationListItemSchema)
 export type StaffApplicationListResponse = z.infer<typeof staffApplicationListResponseSchema>
 
+/** The owning officer's recommendation on a `Review`-stage application, once made. */
+export const recommendationSchema = z.object({
+  by: z.string().min(1),
+  decision: z.enum(["approve", "counter", "decline"]),
+  amount: z.number().int(),
+  tenor: z.number().int(),
+  reasonCode: z.string().min(1).nullable(),
+  overrideLevel: z.enum(["above", "below"]).nullable(),
+  note: z.string().min(1).nullable(),
+  recommendedAt: z.string().min(1),
+})
+export type RecommendationShape = z.infer<typeof recommendationSchema>
+
+/** The AI's own implicit recommendation for a referred application - derived, never stored separately. */
+export const aiRecommendationSchema = z.object({
+  decision: z.literal("approve"),
+  amount: z.number().int(),
+  tenor: z.number().int(),
+})
+export type AiRecommendationShape = z.infer<typeof aiRecommendationSchema>
+
 /** `decision` is `z.unknown()` for the same ADR-0002 reason as `createApplicationSuccessSchema`. */
 export const staffApplicationDetailSchema = z.object({
   id: z.string().min(1),
@@ -172,6 +193,11 @@ export const staffApplicationDetailSchema = z.object({
   slaHoursLeft: z.number().nullable(),
   infoRequestItems: z.array(z.string().min(1)).nullable(),
   infoRequestMessage: z.string().min(1).nullable(),
+  recommendation: recommendationSchema.nullable(),
+  aiRecommendation: aiRecommendationSchema.nullable(),
+  reviewerId: z.string().min(1).nullable(),
+  declineReasonCode: z.string().min(1).nullable(),
+  decidedAt: z.string().min(1).nullable(),
   consents: z.array(z.object({
     kind: z.string().min(1),
     capturedAt: z.string().min(1),
@@ -225,6 +251,43 @@ export const resolveInfoResponseSchema = z.union([
 ])
 export type ResolveInfoResponse = z.infer<typeof resolveInfoResponseSchema>
 
+export const recommendApplicationRequestSchema = z.object({
+  decision: z.enum(["approve", "counter", "decline"]),
+  amount: z.number().int().positive().nullable().optional(),
+  tenor: z.number().int().positive(),
+  reasonCode: z.string().min(1).optional(),
+  note: z.string().min(1).optional(),
+})
+export type RecommendApplicationRequest = z.infer<typeof recommendApplicationRequestSchema>
+
+export const recommendApplicationResponseSchema = z.union([
+  z.object({
+    ok: z.literal(true),
+    stage: z.literal("Approval"),
+    overrideLevel: z.enum(["above", "below"]).nullable(),
+  }),
+  z.object({ ok: z.literal(false), error: z.string().min(1) }),
+])
+export type RecommendApplicationResponse = z.infer<typeof recommendApplicationResponseSchema>
+
+export const returnToOfficerResponseSchema = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), error: z.string().min(1) }),
+])
+export type ReturnToOfficerResponse = z.infer<typeof returnToOfficerResponseSchema>
+
+export const tenantConfigResponseSchema = z.object({
+  killSwitch: z.boolean(),
+  bureauDown: z.boolean(),
+})
+export type TenantConfigResponse = z.infer<typeof tenantConfigResponseSchema>
+
+export const updateTenantConfigRequestSchema = z.object({
+  killSwitch: z.boolean().optional(),
+  bureauDown: z.boolean().optional(),
+})
+export type UpdateTenantConfigRequest = z.infer<typeof updateTenantConfigRequestSchema>
+
 /**
  * The one seeded checklist for requesting information from a borrower -
  * single source of truth for both apps/api's `@IsIn` validation whitelist
@@ -239,3 +302,20 @@ export const INFO_REQUEST_ITEMS = [
   ["ri3", "Latest income tax return"],
 ] as const
 export const INFO_REQUEST_ITEM_IDS = INFO_REQUEST_ITEMS.map(([id]) => id)
+
+/**
+ * The seeded, fixed reason-code list for an officer's recommendation that
+ * differs from the AI's own - single source of truth for both apps/api's
+ * validation whitelist and apps/backoffice's real recommend-a-decision UI,
+ * same reasoning as `INFO_REQUEST_ITEMS` above. Lifted verbatim from the
+ * simulated console's own `REASON_CODES` (apps/backoffice/src/mock/
+ * constants.ts) at the time this was written.
+ */
+export const OVERRIDE_REASON_CODES = [
+  "Verified income supports a higher amount",
+  "Strong deposit relationship with Kalinaw",
+  "Additional documents reduce risk",
+  "Policy exception approved by credit policy",
+  "Risk higher than the score suggests",
+  "Lower amount keeps repayments affordable",
+] as const

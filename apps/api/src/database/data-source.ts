@@ -5,6 +5,7 @@ import { UserEntity } from '../users/user.entity';
 import { ApplicationEntity } from '../applications/application.entity';
 import { BorrowerProfileEntity } from '../applications/borrower-profile.entity';
 import { ConsentEntity } from '../applications/consent.entity';
+import { AuditLogEntity } from '../audit-log/audit-log.entity';
 
 /**
  * Local PostgreSQL defaults match the `aimready`/`aimready_dev` role and
@@ -23,6 +24,7 @@ export const dataSourceOptions: DataSourceOptions = {
     ApplicationEntity,
     ConsentEntity,
     BorrowerProfileEntity,
+    AuditLogEntity,
   ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,

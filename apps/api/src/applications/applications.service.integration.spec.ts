@@ -366,7 +366,7 @@ describe('ApplicationsService (integration)', () => {
           decision: { outcome: 'refer' } as never,
         }),
       );
-      const rows = await service.findAllForTenant(TENANT_ID, {});
+      const rows = await service.findAllForTenant(user(), {});
       expect(rows.every((r) => r.id !== other.id)).toBe(true);
       expect(rows.length).toBeGreaterThan(0);
     });
@@ -374,13 +374,13 @@ describe('ApplicationsService (integration)', () => {
     it('filters the list by stage and by product', async () => {
       const result = await service.create(user(), validDto());
       if (!result.ok) throw new Error('expected success');
-      const byStage = await service.findAllForTenant(TENANT_ID, {
+      const byStage = await service.findAllForTenant(user(), {
         stage: 'Declined',
       });
       expect(
         byStage.find((r) => r.id === result.applicationId),
       ).toBeUndefined();
-      const byProduct = await service.findAllForTenant(TENANT_ID, {
+      const byProduct = await service.findAllForTenant(user(), {
         product: 'SL',
       });
       expect(
@@ -423,7 +423,7 @@ describe('ApplicationsService (integration)', () => {
         dataSource,
       );
       await expect(
-        brokenService.findAllForTenant(TENANT_ID, {}),
+        brokenService.findAllForTenant(user(), {}),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
 
@@ -614,6 +614,141 @@ describe('ApplicationsService (integration)', () => {
           decision: 'approve',
         }),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
+  describe('queues and pick', () => {
+    const openApp = (over: Partial<ApplicationEntity> = {}) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          ...over,
+        }),
+      );
+
+    it('lists only the applications assigned to the caller under the mine filter', async () => {
+      const mine = await openApp({ assigneeId: borrowerId, productCode: 'PL' });
+      await openApp({ productCode: 'SL' }); // unassigned, same tenant - must not appear under "mine"
+      const rows = await service.findAllForTenant(user(), { queue: 'mine' });
+      expect(rows.map((r) => r.id)).toEqual([mine.id]);
+    });
+
+    it('lists only unassigned Review-stage applications under the unassigned filter', async () => {
+      const unassigned = await openApp({ productCode: 'PL' });
+      await openApp({ productCode: 'SL', assigneeId: borrowerId }); // assigned - must not appear
+      const rows = await service.findAllForTenant(user(), {
+        queue: 'unassigned',
+      });
+      expect(rows.map((r) => r.id)).toEqual([unassigned.id]);
+    });
+
+    it("never leaks another tenant's application into mine or unassigned, even with a colliding assignee/borrower id", async () => {
+      // Same borrowerId/assigneeId as the caller, but a different tenant -
+      // proves the queue filters are never satisfied by assigneeId/stage
+      // alone; tenantId must always be ANDed in too.
+      await openApp({
+        tenantId: 'another-tenant',
+        assigneeId: borrowerId,
+        productCode: 'PL',
+      });
+      await openApp({ tenantId: 'another-tenant', productCode: 'SL' });
+      const mine = await service.findAllForTenant(user(), { queue: 'mine' });
+      const unassigned = await service.findAllForTenant(user(), {
+        queue: 'unassigned',
+      });
+      expect(mine).toHaveLength(0);
+      expect(unassigned).toHaveLength(0);
+    });
+
+    it('refuses an unassigned-queue request with a conflicting explicit stage filter', async () => {
+      await expect(
+        service.findAllForTenant(user(), {
+          queue: 'unassigned',
+          stage: 'Offer',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('allows an unassigned-queue request with a redundant but consistent stage filter', async () => {
+      const unassigned = await openApp();
+      const rows = await service.findAllForTenant(user(), {
+        queue: 'unassigned',
+        stage: 'Review',
+      });
+      expect(rows.map((r) => r.id)).toEqual([unassigned.id]);
+    });
+
+    it('picks an unassigned Review-stage application, recording the assignee and time', async () => {
+      const app = await openApp();
+      const result = await service.pick(user(), app.id);
+      expect(result).toEqual({ ok: true });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.assigneeId).toBe(borrowerId);
+      expect(stored?.assignedAt).toBeInstanceOf(Date);
+    });
+
+    it('refuses to pick an already-assigned application', async () => {
+      const otherOfficerId = '22222222-2222-2222-2222-222222222222';
+      const app = await openApp({ assigneeId: otherOfficerId });
+      const result = await service.pick(user(), app.id);
+      expect(result.ok).toBe(false);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.assigneeId).toBe(otherOfficerId);
+    });
+
+    it('refuses to pick an application not in Review', async () => {
+      const app = await openApp({ stage: 'Offer' as const });
+      await expect(service.pick(user(), app.id)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it("refuses to pick another tenant's application, same as a missing one", async () => {
+      const app = await openApp();
+      await expect(
+        service.pick({ sub: borrowerId, tenantId: 'another-tenant' }, app.id),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('lets exactly one of two concurrent picks on the same application win', async () => {
+      const app = await openApp();
+      const otherOfficerId = '33333333-3333-3333-3333-333333333333';
+      const [first, second] = await Promise.all([
+        service.pick(user(), app.id),
+        service.pick({ sub: otherOfficerId, tenantId: TENANT_ID }, app.id),
+      ]);
+      const won = [first, second].filter((r) => r.ok);
+      expect(won).toHaveLength(1);
+    });
+
+    it('throws a distinct failure when the application store is unreachable', async () => {
+      const brokenApplications = {
+        findOne: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+      );
+      await expect(
+        brokenService.pick(user(), '11111111-1111-1111-1111-111111111111'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('refuses a malformed id as not-found, never reaching the database', async () => {
+      await expect(service.pick(user(), 'not-a-uuid')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

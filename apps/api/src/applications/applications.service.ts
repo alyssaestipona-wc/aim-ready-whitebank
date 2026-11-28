@@ -6,7 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, IsNull, QueryFailedError, Repository } from 'typeorm';
 import {
   formatPeso,
   monthlyPayment,
@@ -59,12 +59,15 @@ export type StaffApplicationListItem = {
   stage: ApplicationStage;
   outcome: Outcome;
   grade: Grade | null;
+  assigneeId: string | null;
 };
 
 export type DecideApplicationResult =
   | { ok: true; stage: 'Offer'; monthlyPayment: number }
   | { ok: true; stage: 'Declined' }
   | { ok: false; error: string };
+
+export type PickApplicationResult = { ok: true } | { ok: false; error: string };
 
 export type StaffApplicationDetail = {
   id: string;
@@ -79,6 +82,7 @@ export type StaffApplicationDetail = {
   stage: ApplicationStage;
   decision: DecisionRecord;
   createdAt: Date;
+  assigneeId: string | null;
   consents: { kind: ConsentKind; capturedAt: Date; termsVersion: string }[];
 };
 
@@ -274,18 +278,39 @@ export class ApplicationsService {
     await this.applications.save(application);
   }
 
-  /** Staff-facing, tenant-scoped list - never includes another tenant's rows. */
+  /**
+   * Staff-facing, tenant-scoped list - never includes another tenant's rows.
+   * `filters.queue` narrows to the caller's own assigned applications
+   * (`mine`) or to the Unassigned queue (`unassigned`, Review-stage only,
+   * no assignee); omitted shows the team view (every tenant application,
+   * matching the simulated console's own team-queue, which never filters
+   * by owner either - see work-queues' design.md).
+   */
   async findAllForTenant(
-    tenantId: string,
+    user: SessionUser,
     filters: ListApplicationsDto,
   ): Promise<StaffApplicationListItem[]> {
+    if (
+      filters.queue === 'unassigned' &&
+      filters.stage &&
+      filters.stage !== 'Review'
+    ) {
+      throw new BadRequestException(
+        "The unassigned queue only ever contains Review-stage applications; stage filter must be 'Review' or omitted.",
+      );
+    }
     let rows: ApplicationEntity[];
     try {
       rows = await this.applications.find({
         where: {
-          tenantId,
-          ...(filters.stage ? { stage: filters.stage } : {}),
+          tenantId: user.tenantId,
+          stage:
+            filters.queue === 'unassigned'
+              ? 'Review'
+              : (filters.stage ?? undefined),
           ...(filters.product ? { productCode: filters.product } : {}),
+          ...(filters.queue === 'mine' ? { assigneeId: user.sub } : {}),
+          ...(filters.queue === 'unassigned' ? { assigneeId: IsNull() } : {}),
         },
         order: { createdAt: 'DESC' },
       });
@@ -304,6 +329,7 @@ export class ApplicationsService {
       stage: r.stage,
       outcome: r.decision.outcome,
       grade: r.decision.grade,
+      assigneeId: r.assigneeId,
     }));
   }
 
@@ -353,6 +379,7 @@ export class ApplicationsService {
       stage: application.stage,
       decision: application.decision,
       createdAt: application.createdAt,
+      assigneeId: application.assigneeId,
       consents: consentRows.map((c) => ({
         kind: c.kind,
         capturedAt: c.capturedAt,
@@ -466,5 +493,59 @@ export class ApplicationsService {
     if (result.affected !== 1) {
       throw new BadRequestException('Application is not awaiting a decision.');
     }
+  }
+
+  /**
+   * An officer claims an unassigned, Review-stage application from the
+   * Unassigned queue. Race-safe the same way `applyDecision()` is: the
+   * actual claim is a conditional `UPDATE ... WHERE stage = 'Review' AND
+   * assignee_id IS NULL`, not a `findOne` + `save()`, so two officers
+   * racing to pick the same case can never both succeed.
+   */
+  async pick(
+    user: SessionUser,
+    applicationId: string,
+  ): Promise<PickApplicationResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application pick failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    if (application.stage !== 'Review') {
+      throw new BadRequestException('Application is not awaiting pickup.');
+    }
+    if (application.assigneeId) {
+      return {
+        ok: false,
+        error: 'This application has already been picked by someone else.',
+      };
+    }
+    const result = await this.applications
+      .createQueryBuilder()
+      .update(ApplicationEntity)
+      .set({ assigneeId: user.sub, assignedAt: new Date() })
+      .where('id = :id AND stage = :stage AND assignee_id IS NULL', {
+        id: applicationId,
+        stage: 'Review',
+      })
+      .execute();
+    if (result.affected !== 1) {
+      return {
+        ok: false,
+        error: 'This application has already been picked by someone else.',
+      };
+    }
+    return { ok: true };
   }
 }

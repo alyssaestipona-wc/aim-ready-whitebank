@@ -13,6 +13,9 @@ const STAGES: ApplicationStage[] = [
 
 const PRODUCT_CODES = Object.keys(PRODUCTS) as ProductCode[];
 
+export type QueueFilter = 'mine' | 'unassigned';
+const QUEUE_FILTERS: QueueFilter[] = ['mine', 'unassigned'];
+
 export class ListApplicationsDto {
   @IsOptional()
   @IsIn(STAGES)
@@ -21,4 +24,8 @@ export class ListApplicationsDto {
   @IsOptional()
   @IsIn(PRODUCT_CODES)
   product?: ProductCode;
+
+  @IsOptional()
+  @IsIn(QUEUE_FILTERS)
+  queue?: QueueFilter;
 }

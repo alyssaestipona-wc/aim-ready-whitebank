@@ -146,6 +146,7 @@ export const staffApplicationListItemSchema = z.object({
   stage: z.string().min(1),
   outcome: z.string().min(1),
   grade: z.string().min(1).nullable(),
+  assigneeId: z.string().min(1).nullable(),
 })
 export type StaffApplicationListItem = z.infer<typeof staffApplicationListItemSchema>
 
@@ -166,6 +167,7 @@ export const staffApplicationDetailSchema = z.object({
   stage: z.string().min(1),
   decision: z.unknown(),
   createdAt: z.string().min(1),
+  assigneeId: z.string().min(1).nullable(),
   consents: z.array(z.object({
     kind: z.string().min(1),
     capturedAt: z.string().min(1),
@@ -194,3 +196,9 @@ export type DecideApplicationError = z.infer<typeof decideApplicationErrorSchema
 
 export const decideApplicationResponseSchema = z.union([decideApplicationSuccessSchema, decideApplicationErrorSchema])
 export type DecideApplicationResponse = DecideApplicationSuccess | DecideApplicationError
+
+export const pickApplicationResponseSchema = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), error: z.string().min(1) }),
+])
+export type PickApplicationResponse = z.infer<typeof pickApplicationResponseSchema>

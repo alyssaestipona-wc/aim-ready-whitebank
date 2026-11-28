@@ -15,6 +15,7 @@ const LIST_ITEM = {
   stage: "Offer",
   outcome: "approve",
   grade: "A",
+  assigneeId: null,
 }
 
 const DETAIL = {
@@ -28,6 +29,7 @@ const DETAIL = {
   obligations: 750_000,
   purpose: "Home improvement",
   stage: "Offer",
+  assigneeId: null,
   decision: {
     outcome: "approve",
     score: 720,
@@ -70,6 +72,56 @@ describe("real applications list", () => {
     vi.mocked(fetch).mockRejectedValueOnce(new Error("network down"))
     renderWithToasts(<LiveApplicationsPage />)
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument())
+  })
+
+  it("defaults to the My queue tab, requesting queue=mine", async () => {
+    setup("officer", "/live-applications")
+    mockFetchOnce(200, [LIST_ITEM])
+    renderWithToasts(<LiveApplicationsPage />)
+    await waitFor(() => expect(screen.getByText("app-1")).toBeInTheDocument())
+    const [url] = vi.mocked(fetch).mock.calls[0] as [string]
+    expect(url).toContain("queue=mine")
+  })
+
+  it("requests queue=unassigned on the Unassigned tab and shows a Pick button for an officer", async () => {
+    setup("officer", "/live-applications")
+    mockFetchOnce(200, [LIST_ITEM])
+    renderWithToasts(<LiveApplicationsPage />)
+    await waitFor(() => expect(screen.getByText("app-1")).toBeInTheDocument())
+
+    mockFetchOnce(200, [{ ...LIST_ITEM, stage: "Review" }])
+    await userEvent.click(screen.getByRole("tab", { name: "Unassigned" }))
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pick" })).toBeInTheDocument())
+    const lastCall = vi.mocked(fetch).mock.calls.at(-1) as [string]
+    expect(lastCall[0]).toContain("queue=unassigned")
+  })
+
+  it("does not show a Pick button for a non-officer role", async () => {
+    setup("approver", "/live-applications")
+    mockFetchOnce(200, [])
+    renderWithToasts(<LiveApplicationsPage />)
+    await waitFor(() => expect(screen.getByText("No real applications here")).toBeInTheDocument())
+
+    mockFetchOnce(200, [{ ...LIST_ITEM, stage: "Review" }])
+    await userEvent.click(screen.getByRole("tab", { name: "Unassigned" }))
+    await waitFor(() => expect(screen.getByText("app-1")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: "Pick" })).not.toBeInTheDocument()
+  })
+
+  it("picks an application and refetches the Unassigned tab", async () => {
+    setup("officer", "/live-applications")
+    mockFetchOnce(200, [])
+    renderWithToasts(<LiveApplicationsPage />)
+    await waitFor(() => expect(screen.getByText("No real applications here")).toBeInTheDocument())
+
+    mockFetchOnce(200, [{ ...LIST_ITEM, stage: "Review" }])
+    await userEvent.click(screen.getByRole("tab", { name: "Unassigned" }))
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pick" })).toBeInTheDocument())
+
+    mockFetchOnce(200, { ok: true })
+    mockFetchOnce(200, [])
+    await userEvent.click(screen.getByRole("button", { name: "Pick" }))
+    await waitFor(() => expect(screen.getByText("No real applications here")).toBeInTheDocument())
   })
 })
 

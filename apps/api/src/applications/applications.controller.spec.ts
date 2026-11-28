@@ -43,4 +43,8 @@ describe('ApplicationsController roles', () => {
   it('restricts decide to the approver role only, not every staff role', () => {
     expect(rolesOf(proto.decide)).toEqual(['approver']);
   });
+
+  it('restricts pick to the officer role only, not every staff role', () => {
+    expect(rolesOf(proto.pick)).toEqual(['officer']);
+  });
 });

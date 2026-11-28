@@ -17,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import {
   ApplicationsService,
   type DecideApplicationResult,
+  type PickApplicationResult,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from './applications.service';
@@ -60,7 +61,10 @@ export class ApplicationsController {
     @Query() query: ListApplicationsDto,
   ): Promise<StaffApplicationListItem[]> {
     const user = req.user!;
-    return this.applications.findAllForTenant(user.tenantId, query);
+    return this.applications.findAllForTenant(
+      { sub: user.sub, tenantId: user.tenantId },
+      query,
+    );
   }
 
   @Get(':id')
@@ -86,6 +90,20 @@ export class ApplicationsController {
       { sub: user.sub, tenantId: user.tenantId },
       id,
       dto,
+    );
+  }
+
+  @Patch(':id/pick')
+  @Roles('officer')
+  @HttpCode(200)
+  pick(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+  ): Promise<PickApplicationResult> {
+    const user = req.user!;
+    return this.applications.pick(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
     );
   }
 

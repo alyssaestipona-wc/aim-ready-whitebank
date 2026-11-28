@@ -5,6 +5,8 @@ import { PRODUCTS, type ProductCode } from '../policy';
 
 const STAGES: ApplicationStage[] = [
   'Review',
+  'Info requested',
+  'Approval',
   'Offer',
   'Declined',
   'Disbursed',

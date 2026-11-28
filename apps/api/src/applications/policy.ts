@@ -43,7 +43,13 @@ export const PRODUCTS: Record<ProductCode, Product> = {
   },
 };
 
-export const POLICY: DecisionPolicy = {
+/**
+ * `killSwitch`/`bureauDown` are not part of this static object - they are
+ * now live, toggleable tenant configuration (`TenantConfigService`), not
+ * hardcoded constants. `ApplicationsService.create()` composes the full
+ * `DecisionPolicy` at call time: `{ ...POLICY, killSwitch, bureauDown }`.
+ */
+export const POLICY: Omit<DecisionPolicy, 'killSwitch' | 'bureauDown'> = {
   rules: [
     {
       id: 'age',
@@ -102,8 +108,6 @@ export const POLICY: DecisionPolicy = {
   },
   autoLimits: { PL: toCentavos(200000), SL: toCentavos(150000) },
   automation: { PL: 'live', SL: 'live' },
-  killSwitch: false,
-  bureauDown: false,
   ruleSetVersion: 'v4',
   modelVersion: 'PL-Score 3.2',
   bankName: 'Kalinaw',
@@ -155,15 +159,26 @@ export const GRADE_RATE: Record<Grade, number> = {
 export const SLA_HOURS: Partial<Record<ApplicationStage, number>> = {
   Review: 48,
   'Info requested': 72,
+  /** Lifted verbatim from the simulated console's `recommend()`: `a.sla = 8`. */
+  Approval: 8,
 };
 
 /**
+ * Lifted verbatim from `apps/backoffice/src/mock/constants.ts`'s
+ * `OVERRIDE_THRESHOLD`: the gap from the AI's own recommended amount (or a
+ * decision flip) that requires a reason code and is classified "above"
+ * rather than "below" threshold.
+ */
+export const OVERRIDE_THRESHOLD = toCentavos(50000);
+
+/**
  * Re-exported from `@aim-ready/contracts` - the single shared source of
- * truth for this checklist, so apps/api's validation whitelist and
- * apps/backoffice's real request-info checklist UI can never silently
- * drift apart (each used to keep its own independent copy).
+ * truth for these seeded lists, so apps/api's validation whitelist and
+ * apps/backoffice's real UI can never silently drift apart (each used to
+ * keep its own independent copy).
  */
 export {
   INFO_REQUEST_ITEMS,
   INFO_REQUEST_ITEM_IDS,
+  OVERRIDE_REASON_CODES,
 } from '@aim-ready/contracts';

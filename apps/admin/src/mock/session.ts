@@ -33,6 +33,11 @@ export function getSessionRole(): RoleKey | null {
   return decodeSessionToken(token) ? "admin" : null
 }
 
+/** The raw signed session token, for calling apps/api directly as `Authorization: Bearer <token>`. */
+export function getSessionToken(): string | null {
+  return readCookie(SESSION_COOKIE)
+}
+
 /** Stores the real session token apps/api's identity service issued, or clears it on sign-out. */
 export function setSessionToken(token: string | null): void {
   writeCookie(SESSION_COOKIE, token)

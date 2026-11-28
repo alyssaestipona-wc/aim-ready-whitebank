@@ -8,9 +8,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, IsNull, QueryFailedError, Repository } from 'typeorm';
 import {
+  aiRecommendation,
   formatPeso,
   monthlyPayment,
   simulateDecision,
+  type AiRecommendation,
   type DecisionInput,
   type DecisionRecord,
   type Grade,
@@ -18,23 +20,36 @@ import {
 } from '@aim-ready/core';
 
 import { BorrowerProfileEntity } from './borrower-profile.entity';
-import { ApplicationEntity, type ApplicationStage } from './application.entity';
+import {
+  ApplicationEntity,
+  type ApplicationStage,
+  type Recommendation,
+} from './application.entity';
 import { ConsentEntity, type ConsentKind } from './consent.entity';
+import { TenantConfigService } from '../tenant-config/tenant-config.service';
 import type { CreateApplicationDto } from './dto/create-application.dto';
 import type { ListApplicationsDto } from './dto/list-applications.dto';
 import type { DecideApplicationDto } from './dto/decide-application.dto';
 import type { RequestInfoDto } from './dto/request-info.dto';
+import type { RecommendApplicationDto } from './dto/recommend-application.dto';
 import {
   PRODUCTS,
   POLICY,
   APPROVER_AUTHORITY,
   DECLINE_REASON_CODES,
   GRADE_RATE,
+  OVERRIDE_REASON_CODES,
+  OVERRIDE_THRESHOLD,
   SLA_HOURS,
 } from './policy';
 
 const TERMS_VERSION = 'v3.2';
-const OPEN_STAGES: ApplicationStage[] = ['Review', 'Info requested', 'Offer'];
+const OPEN_STAGES: ApplicationStage[] = [
+  'Review',
+  'Info requested',
+  'Approval',
+  'Offer',
+];
 const POSTGRES_UNIQUE_VIOLATION = '23505';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -75,6 +90,12 @@ export type DecideApplicationResult =
 
 export type PickApplicationResult = { ok: true } | { ok: false; error: string };
 
+export type RecommendApplicationResult =
+  | { ok: true; stage: 'Approval'; overrideLevel: 'above' | 'below' | null }
+  | { ok: false; error: string };
+
+export type ReturnToOfficerResult = { ok: true } | { ok: false; error: string };
+
 export type StaffApplicationDetail = {
   id: string;
   tenantId: string;
@@ -92,6 +113,11 @@ export type StaffApplicationDetail = {
   slaHoursLeft: number | null;
   infoRequestItems: string[] | null;
   infoRequestMessage: string | null;
+  recommendation: Recommendation | null;
+  aiRecommendation: AiRecommendation | null;
+  reviewerId: string | null;
+  declineReasonCode: string | null;
+  decidedAt: Date | null;
   consents: { kind: ConsentKind; capturedAt: Date; termsVersion: string }[];
 };
 
@@ -125,6 +151,7 @@ export class ApplicationsService {
     @InjectRepository(BorrowerProfileEntity)
     private readonly profiles: Repository<BorrowerProfileEntity>,
     private readonly dataSource: DataSource,
+    private readonly tenantConfig: TenantConfigService,
   ) {}
 
   async create(
@@ -159,6 +186,7 @@ export class ApplicationsService {
 
     let profile: BorrowerProfileEntity | null;
     let existing: ApplicationEntity | null;
+    let cfg: { killSwitch: boolean; bureauDown: boolean };
     try {
       profile = await this.profiles.findOne({
         where: { userId: user.sub, tenantId: user.tenantId },
@@ -171,6 +199,7 @@ export class ApplicationsService {
         },
         order: { createdAt: 'DESC' },
       });
+      cfg = await this.tenantConfig.get(user.tenantId);
     } catch (err) {
       this.logger.error(
         'Application submission failed: store unreachable',
@@ -200,7 +229,11 @@ export class ApplicationsService {
       mismatch: 0,
       stable: profile.stable,
     };
-    const decision = simulateDecision(input, POLICY);
+    const decision = simulateDecision(input, {
+      ...POLICY,
+      killSwitch: cfg.killSwitch,
+      bureauDown: cfg.bureauDown,
+    });
     const stage: ApplicationStage =
       decision.outcome === 'approve'
         ? 'Offer'
@@ -412,6 +445,16 @@ export class ApplicationsService {
       slaHoursLeft: slaHoursLeft(application.stage, application.stageEnteredAt),
       infoRequestItems: application.infoRequestItems,
       infoRequestMessage: application.infoRequestMessage,
+      recommendation: application.recommendation,
+      aiRecommendation: aiRecommendation(
+        application.decision,
+        application.amount,
+        application.tenor,
+        application.income,
+      ),
+      reviewerId: application.reviewerId,
+      declineReasonCode: application.declineReasonCode,
+      decidedAt: application.decidedAt,
       consents: consentRows.map((c) => ({
         kind: c.kind,
         capturedAt: c.capturedAt,
@@ -421,11 +464,13 @@ export class ApplicationsService {
   }
 
   /**
-   * An approver decides a referred (`Review`-stage) application. Above-
-   * authority approvals and missing/invalid decline reason codes are
-   * business errors (`{ ok: false }`), not exceptions - the request itself
-   * is well-formed, it is just refused, the same pattern `create()` already
-   * uses for its own business rules.
+   * An approver decides a recommended (`Approval`-stage) application. Above-
+   * authority approvals, segregation-of-duties violations, and missing/
+   * invalid decline reason codes are business errors (`{ ok: false }`), not
+   * exceptions - the request itself is well-formed, it is just refused, the
+   * same pattern `create()` already uses for its own business rules.
+   * Supersedes the earlier "approver decides a Review-stage application
+   * directly" behavior - see design.md's own named risk/mitigation.
    */
   async decide(
     user: SessionUser,
@@ -448,23 +493,31 @@ export class ApplicationsService {
     if (!application || application.tenantId !== user.tenantId) {
       throw new NotFoundException();
     }
-    if (application.stage !== 'Review') {
+    const recommendation = application.recommendation;
+    if (application.stage !== 'Approval' || !recommendation) {
       throw new BadRequestException('Application is not awaiting a decision.');
+    }
+    if (recommendation.by === user.sub) {
+      return {
+        ok: false,
+        error:
+          'You recommended this case. A different approver must decide it.',
+      };
     }
 
     if (dto.decision === 'approve') {
       const grade = application.decision.grade;
       if (
-        application.amount > APPROVER_AUTHORITY.limit ||
+        recommendation.amount > APPROVER_AUTHORITY.limit ||
         !grade ||
         !APPROVER_AUTHORITY.grades.includes(grade)
       ) {
         return {
           ok: false,
-          error: `This application is above your delegated authority (limit ${formatPeso(APPROVER_AUTHORITY.limit)}, grades ${APPROVER_AUTHORITY.grades.join('–')}).`,
+          error: `This application is above your delegated authority (limit ${formatPeso(APPROVER_AUTHORITY.limit)}, grades ${APPROVER_AUTHORITY.grades.join('–')}). Route it to credit committee.`,
         };
       }
-      await this.applyDecision(application.id, {
+      await this.applyDecision(application.id, recommendation.recommendedAt, {
         stage: 'Offer',
         reviewerId: user.sub,
         declineReasonCode: null,
@@ -475,8 +528,8 @@ export class ApplicationsService {
         ok: true,
         stage: 'Offer',
         monthlyPayment: monthlyPayment(
-          application.amount,
-          application.tenor,
+          recommendation.amount,
+          recommendation.tenor,
           GRADE_RATE[grade],
         ),
       };
@@ -491,7 +544,7 @@ export class ApplicationsService {
         error: `Choose a reason: ${DECLINE_REASON_CODES.join(', ')}.`,
       };
     }
-    await this.applyDecision(application.id, {
+    await this.applyDecision(application.id, recommendation.recommendedAt, {
       stage: 'Declined',
       reviewerId: user.sub,
       declineReasonCode: dto.reasonCode,
@@ -502,15 +555,22 @@ export class ApplicationsService {
   }
 
   /**
-   * Writes the decision with a conditional `WHERE stage = 'Review'`, not a
-   * plain `findOne` + `save()` - the real race-safe enforcement that only
-   * one of two concurrent decide requests on the same application can ever
-   * win, the same shape `create()`'s partial unique index already gives the
-   * duplicate-open-application rule. `affected === 0` means another request
-   * already decided it between this method's own read and this write.
+   * Writes the decision with a conditional `WHERE stage = 'Approval' AND
+   * recommendation ->> 'recommendedAt' = :recommendedAt`, not a plain
+   * `findOne` + `save()` - the real race-safe enforcement that only one of
+   * two concurrent decide requests on the same application can ever win,
+   * the same shape `create()`'s partial unique index already gives the
+   * duplicate-open-application rule. Pinning to the exact recommendation
+   * read (not just the stage) also closes the narrow window where a
+   * `returnToOfficer()` + re-`recommend()` cycle completes between this
+   * method's own read and write: the stage alone would still say
+   * `'Approval'`, but the recommendation underneath it would have changed.
+   * `affected === 0` means either happened - another request already
+   * decided it, or the recommendation it was about to decide is stale.
    */
   private async applyDecision(
     id: string,
+    recommendedAt: string,
     patch: {
       stage: 'Offer' | 'Declined';
       reviewerId: string;
@@ -523,7 +583,10 @@ export class ApplicationsService {
       .createQueryBuilder()
       .update(ApplicationEntity)
       .set(patch)
-      .where('id = :id AND stage = :stage', { id, stage: 'Review' })
+      .where(
+        "id = :id AND stage = :stage AND recommendation ->> 'recommendedAt' = :recommendedAt",
+        { id, stage: 'Approval', recommendedAt },
+      )
       .execute();
     if (result.affected !== 1) {
       throw new BadRequestException('Application is not awaiting a decision.');
@@ -580,6 +643,192 @@ export class ApplicationsService {
         ok: false,
         error: 'This application has already been picked by someone else.',
       };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * The owning officer recommends a decision on a `Review`-stage
+   * application, moving it to `Approval`. Ported from the simulated
+   * console's `recommend()`/`overrideLevel()` - see design.md. Race-safe
+   * the same way `pick()` is: the actual write is a conditional `UPDATE ...
+   * WHERE stage = 'Review' AND assignee_id = :officerId`.
+   */
+  async recommend(
+    user: SessionUser,
+    applicationId: string,
+    dto: RecommendApplicationDto,
+  ): Promise<RecommendApplicationResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application recommendation failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    if (application.stage !== 'Review') {
+      throw new BadRequestException(
+        'Application is not awaiting a recommendation.',
+      );
+    }
+    if (application.assigneeId !== user.sub) {
+      return {
+        ok: false,
+        error: 'Only the owning officer can recommend a decision.',
+      };
+    }
+
+    const product = PRODUCTS[application.productCode as keyof typeof PRODUCTS];
+    let decision = dto.decision;
+    let amount =
+      dto.amount ?? (decision === 'decline' ? application.amount : NaN);
+    let tenor = dto.tenor;
+    // Only a counter-offer's amount/tenor actually matter here - "approve"
+    // and "decline" are both forced to the application's own amount/tenor
+    // below regardless of what was submitted, so there's nothing to bounds-
+    // check for them (the application's own amount already passed this same
+    // check at submission time, in create()).
+    if (decision === 'counter') {
+      if (!(amount >= product.min && amount <= product.max)) {
+        return {
+          ok: false,
+          error: `Amount must be between ${formatPeso(product.min)} and ${formatPeso(product.max)}.`,
+        };
+      }
+      if (!(tenor >= product.tenorMin && tenor <= product.tenorMax)) {
+        return {
+          ok: false,
+          error: `Tenor must be ${product.tenorMin} to ${product.tenorMax} months.`,
+        };
+      }
+    }
+    if (decision === 'approve' || decision === 'decline') {
+      amount = application.amount;
+      tenor = application.tenor;
+    } else if (
+      decision === 'counter' &&
+      amount === application.amount &&
+      tenor === application.tenor
+    ) {
+      decision = 'approve';
+    }
+
+    const ai = aiRecommendation(
+      application.decision,
+      application.amount,
+      application.tenor,
+      application.income,
+    );
+    const flip = decision === 'decline';
+    const differs =
+      flip ||
+      (decision !== 'decline' &&
+        (!ai || amount !== ai.amount || tenor !== ai.tenor));
+    const gap = ai ? Math.abs(amount - ai.amount) : 0;
+    const overrideLevel: 'above' | 'below' | null = differs
+      ? flip || gap >= OVERRIDE_THRESHOLD
+        ? 'above'
+        : 'below'
+      : null;
+    if (
+      differs &&
+      (!dto.reasonCode ||
+        !(OVERRIDE_REASON_CODES as readonly string[]).includes(dto.reasonCode))
+    ) {
+      return {
+        ok: false,
+        error: `This differs from the AI recommendation. Choose a reason: ${OVERRIDE_REASON_CODES.join(', ')}.`,
+      };
+    }
+
+    const recommendation: Recommendation = {
+      by: user.sub,
+      decision,
+      amount,
+      tenor,
+      reasonCode: differs ? (dto.reasonCode ?? null) : null,
+      overrideLevel,
+      note: dto.note ?? null,
+      recommendedAt: new Date().toISOString(),
+    };
+    const result = await this.applications
+      .createQueryBuilder()
+      .update(ApplicationEntity)
+      .set({
+        recommendation,
+        stage: 'Approval',
+        assigneeId: null,
+        stageEnteredAt: new Date(),
+      })
+      .where('id = :id AND stage = :stage AND assignee_id = :officerId', {
+        id: applicationId,
+        stage: 'Review',
+        officerId: user.sub,
+      })
+      .execute();
+    if (result.affected !== 1) {
+      return {
+        ok: false,
+        error: 'Application is not awaiting a recommendation.',
+      };
+    }
+    return { ok: true, stage: 'Approval', overrideLevel };
+  }
+
+  /**
+   * An approver sends an `Approval`-stage application back to the officer
+   * who recommended it, clearing the recommendation. Race-safe the same way
+   * every other stage transition here is.
+   */
+  async returnToOfficer(
+    user: SessionUser,
+    applicationId: string,
+  ): Promise<ReturnToOfficerResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application return failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    if (application.stage !== 'Approval' || !application.recommendation) {
+      throw new BadRequestException('Application is not in Approval.');
+    }
+    const officerId = application.recommendation.by;
+    const result = await this.applications
+      .createQueryBuilder()
+      .update(ApplicationEntity)
+      .set({
+        stage: 'Review',
+        assigneeId: officerId,
+        recommendation: null,
+        stageEnteredAt: new Date(),
+      })
+      .where('id = :id AND stage = :stage', {
+        id: applicationId,
+        stage: 'Approval',
+      })
+      .execute();
+    if (result.affected !== 1) {
+      return { ok: false, error: 'Application is not in Approval.' };
     }
     return { ok: true };
   }

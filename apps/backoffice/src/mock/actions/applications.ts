@@ -2,17 +2,23 @@ import {
   decideApplicationRequestSchema,
   decideApplicationResponseSchema,
   pickApplicationResponseSchema,
+  recommendApplicationRequestSchema,
+  recommendApplicationResponseSchema,
   requestInfoRequestSchema,
   requestInfoResponseSchema,
   resolveInfoResponseSchema,
+  returnToOfficerResponseSchema,
   staffApplicationDetailSchema,
   staffApplicationListResponseSchema,
   type DecideApplicationRequest,
   type DecideApplicationResponse,
   type PickApplicationResponse,
+  type RecommendApplicationRequest,
+  type RecommendApplicationResponse,
   type RequestInfoRequest,
   type RequestInfoResponse,
   type ResolveInfoResponse,
+  type ReturnToOfficerResponse,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from "@aim-ready/contracts"
@@ -151,6 +157,54 @@ export async function requestInfo(
     return { ok: false, error: UNAVAILABLE_ERROR }
   }
   const parsed = requestInfoResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
+  return { ok: true, data: parsed.data }
+}
+
+export async function recommendApplication(
+  id: string,
+  dto: RecommendApplicationRequest,
+): Promise<Result<RecommendApplicationResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+  const requestParsed = recommendApplicationRequestSchema.safeParse(dto)
+  if (!requestParsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/recommend`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(requestParsed.data),
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = recommendApplicationResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
+  return { ok: true, data: parsed.data }
+}
+
+export async function returnToOfficer(id: string): Promise<Result<ReturnToOfficerResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/return`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = returnToOfficerResponseSchema.safeParse(body)
   if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
   if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
   return { ok: true, data: parsed.data }

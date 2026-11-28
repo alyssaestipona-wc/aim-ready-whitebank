@@ -18,8 +18,10 @@ import {
   ApplicationsService,
   type DecideApplicationResult,
   type PickApplicationResult,
+  type RecommendApplicationResult,
   type RequestInfoResult,
   type ResolveInfoResult,
+  type ReturnToOfficerResult,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from './applications.service';
@@ -28,6 +30,7 @@ import { CloseApplicationDto } from './dto/close-application.dto';
 import { ListApplicationsDto } from './dto/list-applications.dto';
 import { DecideApplicationDto } from './dto/decide-application.dto';
 import { RequestInfoDto } from './dto/request-info.dto';
+import { RecommendApplicationDto } from './dto/recommend-application.dto';
 
 const STAFF_ROLES = [
   'branch',
@@ -93,6 +96,36 @@ export class ApplicationsController {
       { sub: user.sub, tenantId: user.tenantId },
       id,
       dto,
+    );
+  }
+
+  @Patch(':id/recommend')
+  @Roles('officer')
+  @HttpCode(200)
+  recommend(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+    @Body() dto: RecommendApplicationDto,
+  ): Promise<RecommendApplicationResult> {
+    const user = req.user!;
+    return this.applications.recommend(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/return')
+  @Roles('approver')
+  @HttpCode(200)
+  returnToOfficer(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+  ): Promise<ReturnToOfficerResult> {
+    const user = req.user!;
+    return this.applications.returnToOfficer(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
     );
   }
 

@@ -10,10 +10,27 @@ import {
 export type ApplicationStage =
   | 'Review'
   | 'Info requested'
+  | 'Approval'
   | 'Offer'
   | 'Declined'
   | 'Disbursed'
   | 'Withdrawn';
+
+/**
+ * The owning officer's recommendation on a `Review`-stage application,
+ * written once by `recommend()` and read by `decide()`/`returnToOfficer()` -
+ * frozen the same way `decision` is, never edited in place.
+ */
+export type Recommendation = {
+  by: string;
+  decision: 'approve' | 'counter' | 'decline';
+  amount: number;
+  tenor: number;
+  reasonCode: string | null;
+  overrideLevel: 'above' | 'below' | null;
+  note: string | null;
+  recommendedAt: string;
+};
 
 @Entity({ name: 'applications' })
 @Index(['tenantId', 'borrowerId', 'productCode'])
@@ -61,7 +78,7 @@ export class ApplicationEntity {
   @Column({ type: 'jsonb' })
   decision!: DecisionRecord;
 
-  /** Set when an approver decides a referred (`Review`-stage) application. */
+  /** Set when an approver decides a recommended (`Approval`-stage) application. */
   @Column({ name: 'reviewer_id', type: 'uuid', nullable: true })
   reviewerId!: string | null;
 
@@ -99,6 +116,10 @@ export class ApplicationEntity {
 
   @Column({ name: 'info_request_message', type: 'varchar', nullable: true })
   infoRequestMessage!: string | null;
+
+  /** Set once by `recommend()`; cleared by `returnToOfficer()`; never edited. */
+  @Column({ type: 'jsonb', nullable: true })
+  recommendation!: Recommendation | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

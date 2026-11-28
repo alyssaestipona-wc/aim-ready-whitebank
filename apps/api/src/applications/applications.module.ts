@@ -6,6 +6,7 @@ import { ConsentEntity } from './consent.entity';
 import { BorrowerProfileEntity } from './borrower-profile.entity';
 import { ApplicationsController } from './applications.controller';
 import { ApplicationsService } from './applications.service';
+import { TenantConfigModule } from '../tenant-config/tenant-config.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ApplicationsService } from './applications.service';
       ConsentEntity,
       BorrowerProfileEntity,
     ]),
+    TenantConfigModule,
   ],
   controllers: [ApplicationsController],
   providers: [ApplicationsService],

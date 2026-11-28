@@ -1,14 +1,23 @@
 "use client"
 
-import { Badge, Button, Card, Checkbox, NativeSelect, NativeSelectOption, Textarea, useToast, PageHeader } from "@aim-ready/ui"
-import { formatPeso } from "@aim-ready/core"
-import { INFO_REQUEST_ITEMS, type StaffApplicationDetail } from "@aim-ready/contracts"
+import { Badge, Button, Card, Checkbox, Input, NativeSelect, NativeSelectOption, Textarea, useToast, PageHeader } from "@aim-ready/ui"
+import { formatPeso, fromCentavos, toCentavos } from "@aim-ready/core"
+import { INFO_REQUEST_ITEMS, OVERRIDE_REASON_CODES, type StaffApplicationDetail } from "@aim-ready/contracts"
 import { useParams } from "next/navigation"
 import * as React from "react"
 
 import { useSessionRole } from "@/mock"
 import { DECLINE_CODES } from "@/mock/constants"
-import { decideApplication, getApplication, requestInfo, resolveInfo } from "@/mock/actions/applications"
+import { getSessionToken } from "@/mock/session"
+import { decodeSessionToken } from "@/lib/decode-session-token"
+import {
+  decideApplication,
+  getApplication,
+  recommendApplication,
+  requestInfo,
+  resolveInfo,
+  returnToOfficer,
+} from "@/mock/actions/applications"
 
 const INFO_REQUEST_ITEM_LABELS = new Map<string, string>(INFO_REQUEST_ITEMS)
 
@@ -17,6 +26,12 @@ function SlaLine({ hours }: { hours: number | null }) {
   if (hours < 0) return <p>SLA: <Badge variant="bad">{hours}h (breached)</Badge></p>
   if (hours <= 2) return <p>SLA: <Badge variant="warn">{hours}h left</Badge></p>
   return <p>SLA: {hours}h left</p>
+}
+
+function currentSub(): string | null {
+  const token = getSessionToken()
+  if (!token) return null
+  return decodeSessionToken(token)?.sub ?? null
 }
 
 type Decision = {
@@ -32,10 +47,12 @@ type Decision = {
 }
 
 /**
- * Real application detail from apps/api - decision summary, consents, and
- * (for an approver, while the application is in Review) an Approve/Decline
- * action - staff-decisioning-actions' own addition to staff-application-
- * review's originally read-only screen.
+ * Real application detail from apps/api - decision summary, consents, the
+ * officer's recommend action, the approver's approve/decline/return
+ * actions, and the AI-recommendation/final-decision distinction
+ * (decisioning-recommendation-and-overrides' own addition, replacing
+ * staff-decisioning-actions' temporary "approver decides Review directly"
+ * simplification).
  */
 export default function LiveApplicationDetailPage() {
   const params = useParams<{ id: string }>()
@@ -47,6 +64,11 @@ export default function LiveApplicationDetailPage() {
   const [submitting, setSubmitting] = React.useState(false)
   const [requestItems, setRequestItems] = React.useState<string[]>([])
   const [requestMessage, setRequestMessage] = React.useState("")
+  const [recDecision, setRecDecision] = React.useState<"approve" | "counter" | "decline">("approve")
+  const [recAmount, setRecAmount] = React.useState("")
+  const [recTenor, setRecTenor] = React.useState("")
+  const [recReasonCode, setRecReasonCode] = React.useState("")
+  const [recNote, setRecNote] = React.useState("")
 
   const load = React.useCallback(async () => {
     const res = await getApplication(params.id)
@@ -62,8 +84,13 @@ export default function LiveApplicationDetailPage() {
     let cancelled = false
     getApplication(params.id).then((res) => {
       if (cancelled) return
-      if (res.ok) setData(res.data)
-      else setError(res.error)
+      if (res.ok) {
+        setData(res.data)
+        setRecAmount(String(fromCentavos(res.data.aiRecommendation?.amount ?? res.data.amount)))
+        setRecTenor(String(res.data.tenor))
+      } else {
+        setError(res.error)
+      }
     })
     return () => {
       cancelled = true
@@ -73,6 +100,10 @@ export default function LiveApplicationDetailPage() {
   async function decide(decision: "approve" | "decline") {
     if (decision === "decline" && !reasonCode) {
       toast("Choose a reason before declining.", "bad")
+      return
+    }
+    if (data?.recommendation?.by === currentSub()) {
+      toast("You recommended this case. A different approver must decide it.", "bad")
       return
     }
     setSubmitting(true)
@@ -91,6 +122,61 @@ export default function LiveApplicationDetailPage() {
       // Keep the actions disabled (`submitting`) until this reload lands,
       // so the stage-gated Approve/Decline controls can't be clicked again
       // on stale data before they know the application was already decided.
+      await load()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function returnCase() {
+    setSubmitting(true)
+    try {
+      const res = await returnToOfficer(params.id)
+      if (!res.ok) {
+        toast(res.error, "bad")
+        return
+      }
+      toast("Returned to the officer for more analysis.")
+      await load()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function sendRecommendation() {
+    const amountPesos = Number(recAmount)
+    if (recDecision !== "decline" && !(amountPesos > 0)) {
+      toast("Enter an amount.", "bad")
+      return
+    }
+    const tenorMonths = Number(recTenor)
+    if (recDecision !== "decline" && !(tenorMonths > 0)) {
+      toast("Enter a tenor.", "bad")
+      return
+    }
+    const ai = data?.aiRecommendation
+    const flip = recDecision === "decline"
+    const differs = ai != null && (flip || toCentavos(amountPesos) !== ai.amount || tenorMonths !== ai.tenor)
+    if (differs && !recReasonCode) {
+      toast("This differs from the AI recommendation. Choose a reason code.", "bad")
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await recommendApplication(params.id, {
+        decision: recDecision,
+        amount: recDecision === "decline" ? null : toCentavos(amountPesos),
+        tenor: tenorMonths || 0,
+        reasonCode: recReasonCode || undefined,
+        note: recNote || undefined,
+      })
+      if (!res.ok) {
+        toast(res.error, "bad")
+        return
+      }
+      toast("Recommendation sent to the approver.")
+      setRecReasonCode("")
+      setRecNote("")
       await load()
     } finally {
       setSubmitting(false)
@@ -141,7 +227,9 @@ export default function LiveApplicationDetailPage() {
   if (!data) return <p>Loading…</p>
 
   const decision = data.decision as Decision
-  const canDecide = role === "approver" && data.stage === "Review"
+  const sub = currentSub()
+  const canRecommend = role === "officer" && data.stage === "Review" && data.assigneeId === sub
+  const canDecide = role === "approver" && data.stage === "Approval" && data.recommendation !== null
   const canRequestInfo = role === "officer" && data.stage === "Review"
   const canResolveInfo = role === "officer" && data.stage === "Info requested"
 
@@ -162,6 +250,9 @@ export default function LiveApplicationDetailPage() {
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
+              <Button variant="ghost" disabled={submitting} onClick={() => returnCase()}>
+                Return to officer
+              </Button>
               <Button variant="ghost" disabled={submitting} onClick={() => decide("decline")}>
                 Decline
               </Button>
@@ -177,6 +268,69 @@ export default function LiveApplicationDetailPage() {
         }
       />
       <SlaLine hours={data.slaHoursLeft} />
+      {canRecommend && (
+        <Card>
+          <h2>Recommend a decision</h2>
+          {data.aiRecommendation && (
+            <p>
+              AI recommendation: approve {formatPeso(data.aiRecommendation.amount)} / {data.aiRecommendation.tenor} months
+            </p>
+          )}
+          <NativeSelect aria-label="Recommendation" value={recDecision} onChange={(e) => setRecDecision(e.target.value as typeof recDecision)}>
+            <NativeSelectOption value="approve">Approve</NativeSelectOption>
+            <NativeSelectOption value="counter">Counter-offer</NativeSelectOption>
+            <NativeSelectOption value="decline">Decline</NativeSelectOption>
+          </NativeSelect>
+          {recDecision !== "decline" && (
+            <>
+              <Input
+                aria-label="Recommended amount"
+                type="number"
+                value={recAmount}
+                onChange={(e) => setRecAmount(e.target.value)}
+              />
+              <Input
+                aria-label="Recommended tenor"
+                type="number"
+                value={recTenor}
+                onChange={(e) => setRecTenor(e.target.value)}
+              />
+            </>
+          )}
+          <NativeSelect aria-label="Reason code" value={recReasonCode} onChange={(e) => setRecReasonCode(e.target.value)}>
+            <NativeSelectOption value="">Reason (if it differs from the AI)…</NativeSelectOption>
+            {OVERRIDE_REASON_CODES.map((c) => (
+              <NativeSelectOption key={c} value={c}>
+                {c}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <Textarea
+            aria-label="Note"
+            placeholder="Note for the approver (optional)…"
+            value={recNote}
+            onChange={(e) => setRecNote(e.target.value)}
+          />
+          <Button disabled={submitting} onClick={() => sendRecommendation()}>
+            Send recommendation
+          </Button>
+        </Card>
+      )}
+      {data.recommendation && (
+        <Card>
+          <h2>Officer recommendation</h2>
+          <p>
+            {data.recommendation.decision === "decline"
+              ? "Decline"
+              : `${data.recommendation.decision === "counter" ? "Counter-offer" : "Approve"} ${formatPeso(data.recommendation.amount)} / ${data.recommendation.tenor} months`}
+            {data.recommendation.overrideLevel && (
+              <> · <Badge variant={data.recommendation.overrideLevel === "above" ? "warn" : undefined}>override ({data.recommendation.overrideLevel} threshold)</Badge></>
+            )}
+          </p>
+          {data.recommendation.reasonCode && <p>Reason: {data.recommendation.reasonCode}</p>}
+          {data.recommendation.note && <p>Note: {data.recommendation.note}</p>}
+        </Card>
+      )}
       {canRequestInfo && (
         <Card>
           <h2>Request information</h2>
@@ -219,6 +373,23 @@ export default function LiveApplicationDetailPage() {
               ))}
             </ul>
           )}
+        </Card>
+      )}
+      {data.aiRecommendation && !data.decidedAt && (
+        <Card>
+          <h2>AI recommendation</h2>
+          <p>
+            Approve {formatPeso(data.aiRecommendation.amount)} / {data.aiRecommendation.tenor} months
+          </p>
+        </Card>
+      )}
+      {data.decidedAt && (
+        <Card>
+          <h2>Final decision</h2>
+          <p>
+            {data.stage === "Offer" ? "Approved" : "Declined"} by {data.reviewerId} on {data.decidedAt}
+            {data.declineReasonCode && <> · {data.declineReasonCode}</>}
+          </p>
         </Card>
       )}
       <Card>

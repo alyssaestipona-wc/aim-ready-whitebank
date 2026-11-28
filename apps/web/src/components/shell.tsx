@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@aim-ready/ui"
 
-import { STAFF_WEB_URL } from "@/lib/env"
+import { BACKOFFICE_URL } from "@/lib/env"
 import { navigateHard } from "@/lib/navigation"
 import { SESSION_COOKIE, actions, currentBorrower, myApp, pendingCount, useBankSimulator, useBorrowerState } from "@/mock"
 
@@ -69,7 +69,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-g-50">
       <AppStrip name="Borrower web app" caption="separate from the staff console">
-        <AppStripLink href={STAFF_WEB_URL}>Staff console</AppStripLink>
+        <AppStripLink href={BACKOFFICE_URL}>Staff console</AppStripLink>
       </AppStrip>
       <header className="sticky top-[38px] z-50 border-b border-border bg-paper">
         <Column className="flex h-[62px] items-center gap-3 sm:gap-7">

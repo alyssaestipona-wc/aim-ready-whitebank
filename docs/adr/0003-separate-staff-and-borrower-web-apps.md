@@ -1,7 +1,7 @@
 # 3. Separate staff and borrower web apps
 
 ## Status
-Accepted
+Accepted. Its `apps/borrower-web`/`apps/staff-web` naming is superseded by ADR-0004; the decision to keep the two apps separate, with independent mock stores, still holds.
 
 ## Context
 ADR-0002 anticipates more apps under `apps/` (it names `apps/admin` and `apps/backoffice`). The Phase 1 prototype (OpenSpec change `port-lending-prototype`) has two audiences: bank staff and borrowers. The backlog's build-sequence note also says "Borrower side is its own small, separate app". The two audiences deploy, authenticate and scale independently.

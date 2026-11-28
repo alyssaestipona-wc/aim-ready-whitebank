@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# web
 
-## Getting Started
+The Kalinaw Bank online loans app for borrowers: sign-in, the loan
+application, status tracking, inbox, document upload, offer acceptance,
+e-signing and the loan view.
 
-First, run the development server:
+**This app runs entirely on simulated data.** There are no API calls. All
+applications come from the mock module in `src/mock` and are kept in the
+browser's localStorage. The app is a port of the clickable prototype,
+recorded in OpenSpec change `port-lending-prototype` and ADR-0003.
+
+## Things to know
+
+- **Placeholder session.** Signing in sets an unsigned
+  `wbl_borrower_session` cookie. `src/proxy.ts` checks it on the server to
+  redirect signed-out requests. This is **not authentication**.
+- **Simulated bank steps.** This app has no shared back office, so its mock
+  layer stands in for bank staff. About 4 seconds after a stage that waits on
+  the bank, it moves the application on:
+  - a referral becomes an information request;
+  - after the borrower uploads, the case becomes an offer;
+  - an accepted offer gets documents to sign;
+  - signed documents are booked and the funds are released.
+
+  Each step is marked "(simulated bank step)" in the history.
+- **Simulated core banking.** Loan balances and schedules are a simulated
+  core banking response, not a stored source of truth.
+- **Disconnected from backoffice.** Applications submitted here do not appear
+  in `backoffice`.
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm --filter web dev   # http://localhost:3002
+pnpm --filter web test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_BACKOFFICE_URL` | `http://localhost:3001` | Target of the "Staff console" link in the top strip. |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Demo accounts
 
-## Learn More
+The password for both accounts is `kalinaw2026`.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Borrower | Email |
+| --- | --- |
+| Juan Dela Cruz | `juan.delacruz@email.com` |
+| Carmela Bautista | `carmela.bautista@email.com` |

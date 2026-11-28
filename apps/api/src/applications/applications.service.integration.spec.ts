@@ -12,7 +12,12 @@ import { ApplicationEntity } from './application.entity';
 import { ConsentEntity } from './consent.entity';
 import { ApplicationsService } from './applications.service';
 import type { CreateApplicationDto } from './dto/create-application.dto';
-import { APPROVER_AUTHORITY, DECLINE_REASON_CODES } from './policy';
+import {
+  APPROVER_AUTHORITY,
+  DECLINE_REASON_CODES,
+  INFO_REQUEST_ITEM_IDS,
+  SLA_HOURS,
+} from './policy';
 
 /**
  * Touches TypeORM against the real local PostgreSQL `aimready_test`
@@ -749,6 +754,143 @@ describe('ApplicationsService (integration)', () => {
       await expect(service.pick(user(), 'not-a-uuid')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('SLA and information requests', () => {
+    const openApp = (over: Partial<ApplicationEntity> = {}) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          stageEnteredAt: new Date(),
+          ...over,
+        }),
+      );
+
+    it('reports hours left for a Review-stage application', async () => {
+      await openApp();
+      const rows = await service.findAllForTenant(user(), {});
+      expect(rows[0]?.slaHoursLeft).toBe(SLA_HOURS.Review);
+    });
+
+    it('reports no SLA for a terminal stage', async () => {
+      await openApp({
+        stage: 'Declined' as const,
+        decision: { outcome: 'decline', grade: null } as never,
+      });
+      const rows = await service.findAllForTenant(user(), {});
+      expect(rows[0]?.slaHoursLeft).toBeNull();
+    });
+
+    it('requests information, moving to Info requested with a fresh SLA window', async () => {
+      const app = await openApp();
+      const result = await service.requestInfo(user(), app.id, {
+        items: [INFO_REQUEST_ITEM_IDS[0]],
+        message: 'Please upload your statements.',
+      });
+      expect(result).toEqual({ ok: true });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Info requested');
+      expect(stored?.infoRequestItems).toEqual([INFO_REQUEST_ITEM_IDS[0]]);
+      expect(stored?.infoRequestMessage).toBe('Please upload your statements.');
+      const detail = await service.findOneForTenant(TENANT_ID, app.id);
+      expect(detail.slaHoursLeft).toBe(SLA_HOURS['Info requested']);
+    });
+
+    it('refuses to request information for an application not in Review', async () => {
+      const app = await openApp({ stage: 'Offer' as const });
+      await expect(
+        service.requestInfo(user(), app.id, {
+          items: [INFO_REQUEST_ITEM_IDS[0]],
+          message: 'Please upload your statements.',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("refuses to request information for another tenant's application", async () => {
+      const app = await openApp();
+      await expect(
+        service.requestInfo(
+          { sub: borrowerId, tenantId: 'another-tenant' },
+          app.id,
+          { items: [INFO_REQUEST_ITEM_IDS[0]], message: 'Hi' },
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('resolves an information request, moving back to Review', async () => {
+      const app = await openApp({
+        stage: 'Info requested' as const,
+        infoRequestItems: [INFO_REQUEST_ITEM_IDS[0]],
+        infoRequestMessage: 'Please upload your statements.',
+      });
+      const result = await service.resolveInfo(user(), app.id);
+      expect(result).toEqual({ ok: true });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+      expect(stored?.infoRequestItems).toBeNull();
+      expect(stored?.infoRequestMessage).toBeNull();
+    });
+
+    it('refuses to resolve an application not awaiting information', async () => {
+      const app = await openApp();
+      await expect(service.resolveInfo(user(), app.id)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('lets exactly one of two concurrent resolve attempts win', async () => {
+      const app = await openApp({ stage: 'Info requested' as const });
+      const [first, second] = await Promise.all([
+        service.resolveInfo(user(), app.id),
+        service.resolveInfo(user(), app.id),
+      ]);
+      const won = [first, second].filter((r) => r.ok);
+      expect(won).toHaveLength(1);
+    });
+
+    it('lets exactly one of two concurrent request-info attempts win', async () => {
+      const app = await openApp();
+      const [first, second] = await Promise.all([
+        service.requestInfo(user(), app.id, {
+          items: [INFO_REQUEST_ITEM_IDS[0]],
+          message: 'First request.',
+        }),
+        service.requestInfo(user(), app.id, {
+          items: [INFO_REQUEST_ITEM_IDS[1]],
+          message: 'Second request.',
+        }),
+      ]);
+      const won = [first, second].filter((r) => r.ok);
+      expect(won).toHaveLength(1);
+    });
+
+    it('throws a distinct failure when the application store is unreachable (requestInfo)', async () => {
+      const brokenApplications = {
+        findOne: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+      );
+      await expect(
+        brokenService.requestInfo(
+          user(),
+          '11111111-1111-1111-1111-111111111111',
+          { items: [INFO_REQUEST_ITEM_IDS[0]], message: 'Hi' },
+        ),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 });

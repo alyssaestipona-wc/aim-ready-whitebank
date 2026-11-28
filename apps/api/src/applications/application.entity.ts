@@ -8,7 +8,12 @@ import {
 } from 'typeorm';
 
 export type ApplicationStage =
-  'Review' | 'Offer' | 'Declined' | 'Disbursed' | 'Withdrawn';
+  | 'Review'
+  | 'Info requested'
+  | 'Offer'
+  | 'Declined'
+  | 'Disbursed'
+  | 'Withdrawn';
 
 @Entity({ name: 'applications' })
 @Index(['tenantId', 'borrowerId', 'productCode'])
@@ -74,6 +79,26 @@ export class ApplicationEntity {
 
   @Column({ name: 'assigned_at', type: 'timestamptz', nullable: true })
   assignedAt!: Date | null;
+
+  /**
+   * When `stage` last changed - overwritten on every transition (create,
+   * decide, request-info, resolve-info). Powers the computed `slaHoursLeft`
+   * on reads; `pick()` never touches it since it doesn't change `stage`.
+   */
+  @Column({ name: 'stage_entered_at', type: 'timestamptz', nullable: true })
+  stageEnteredAt!: Date | null;
+
+  /** Set only while in `Info requested`; cleared on resolve. */
+  @Column({
+    name: 'info_request_items',
+    type: 'text',
+    array: true,
+    nullable: true,
+  })
+  infoRequestItems!: string[] | null;
+
+  @Column({ name: 'info_request_message', type: 'varchar', nullable: true })
+  infoRequestMessage!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

@@ -23,16 +23,18 @@ import { ConsentEntity, type ConsentKind } from './consent.entity';
 import type { CreateApplicationDto } from './dto/create-application.dto';
 import type { ListApplicationsDto } from './dto/list-applications.dto';
 import type { DecideApplicationDto } from './dto/decide-application.dto';
+import type { RequestInfoDto } from './dto/request-info.dto';
 import {
   PRODUCTS,
   POLICY,
   APPROVER_AUTHORITY,
   DECLINE_REASON_CODES,
   GRADE_RATE,
+  SLA_HOURS,
 } from './policy';
 
 const TERMS_VERSION = 'v3.2';
-const OPEN_STAGES: ApplicationStage[] = ['Review', 'Offer'];
+const OPEN_STAGES: ApplicationStage[] = ['Review', 'Info requested', 'Offer'];
 const POSTGRES_UNIQUE_VIOLATION = '23505';
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,7 +62,11 @@ export type StaffApplicationListItem = {
   outcome: Outcome;
   grade: Grade | null;
   assigneeId: string | null;
+  slaHoursLeft: number | null;
 };
+
+export type RequestInfoResult = { ok: true } | { ok: false; error: string };
+export type ResolveInfoResult = { ok: true } | { ok: false; error: string };
 
 export type DecideApplicationResult =
   | { ok: true; stage: 'Offer'; monthlyPayment: number }
@@ -83,8 +89,29 @@ export type StaffApplicationDetail = {
   decision: DecisionRecord;
   createdAt: Date;
   assigneeId: string | null;
+  slaHoursLeft: number | null;
+  infoRequestItems: string[] | null;
+  infoRequestMessage: string | null;
   consents: { kind: ConsentKind; capturedAt: Date; termsVersion: string }[];
 };
+
+/**
+ * Hours left in `stage` against its seeded SLA duration, or `null` when the
+ * stage has none (terminal stages) or `stageEnteredAt` is unset (shouldn't
+ * happen for a real row, but defensive since the column is nullable).
+ * Computed on read, never stored - a persisted value would go stale the
+ * instant it's read.
+ */
+function slaHoursLeft(
+  stage: ApplicationStage,
+  stageEnteredAt: Date | null,
+): number | null {
+  const budget = SLA_HOURS[stage];
+  if (budget === undefined || !stageEnteredAt) return null;
+  const elapsedHours =
+    (Date.now() - stageEnteredAt.getTime()) / (1000 * 60 * 60);
+  return Math.round(budget - elapsedHours);
+}
 
 @Injectable()
 export class ApplicationsService {
@@ -196,6 +223,7 @@ export class ApplicationsService {
               purpose: dto.purpose,
               stage,
               decision,
+              stageEnteredAt: new Date(),
             }),
           );
           const kinds: ConsentKind[] = [
@@ -330,6 +358,7 @@ export class ApplicationsService {
       outcome: r.decision.outcome,
       grade: r.decision.grade,
       assigneeId: r.assigneeId,
+      slaHoursLeft: slaHoursLeft(r.stage, r.stageEnteredAt),
     }));
   }
 
@@ -380,6 +409,9 @@ export class ApplicationsService {
       decision: application.decision,
       createdAt: application.createdAt,
       assigneeId: application.assigneeId,
+      slaHoursLeft: slaHoursLeft(application.stage, application.stageEnteredAt),
+      infoRequestItems: application.infoRequestItems,
+      infoRequestMessage: application.infoRequestMessage,
       consents: consentRows.map((c) => ({
         kind: c.kind,
         capturedAt: c.capturedAt,
@@ -437,6 +469,7 @@ export class ApplicationsService {
         reviewerId: user.sub,
         declineReasonCode: null,
         decidedAt: new Date(),
+        stageEnteredAt: new Date(),
       });
       return {
         ok: true,
@@ -463,6 +496,7 @@ export class ApplicationsService {
       reviewerId: user.sub,
       declineReasonCode: dto.reasonCode,
       decidedAt: new Date(),
+      stageEnteredAt: new Date(),
     });
     return { ok: true, stage: 'Declined' };
   }
@@ -482,6 +516,7 @@ export class ApplicationsService {
       reviewerId: string;
       declineReasonCode: string | null;
       decidedAt: Date;
+      stageEnteredAt: Date;
     },
   ): Promise<void> {
     const result = await this.applications
@@ -544,6 +579,113 @@ export class ApplicationsService {
       return {
         ok: false,
         error: 'This application has already been picked by someone else.',
+      };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * An officer pauses a `Review`-stage application on the borrower,
+   * recording a checklist and message. Race-safe the same way `pick()` and
+   * `applyDecision()` are: the stage change is a conditional `UPDATE ...
+   * WHERE stage = 'Review'`, not a `findOne` + `save()`.
+   */
+  async requestInfo(
+    user: SessionUser,
+    applicationId: string,
+    dto: RequestInfoDto,
+  ): Promise<RequestInfoResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application info request failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    if (application.stage !== 'Review') {
+      throw new BadRequestException(
+        'Application is not awaiting review, so information cannot be requested.',
+      );
+    }
+    const result = await this.applications
+      .createQueryBuilder()
+      .update(ApplicationEntity)
+      .set({
+        stage: 'Info requested',
+        infoRequestItems: dto.items,
+        infoRequestMessage: dto.message,
+        stageEnteredAt: new Date(),
+      })
+      .where('id = :id AND stage = :stage', {
+        id: applicationId,
+        stage: 'Review',
+      })
+      .execute();
+    if (result.affected !== 1) {
+      return {
+        ok: false,
+        error:
+          'Application is not awaiting review, so information cannot be requested.',
+      };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * An officer marks an `Info requested` application resolved, returning it
+   * to `Review` - a manual stand-in for a real borrower response, since
+   * document upload doesn't exist yet (see design.md's non-goals).
+   */
+  async resolveInfo(
+    user: SessionUser,
+    applicationId: string,
+  ): Promise<ResolveInfoResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application info resolve failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    if (application.stage !== 'Info requested') {
+      throw new BadRequestException('Application is not awaiting information.');
+    }
+    const result = await this.applications
+      .createQueryBuilder()
+      .update(ApplicationEntity)
+      .set({
+        stage: 'Review',
+        infoRequestItems: null,
+        infoRequestMessage: null,
+        stageEnteredAt: new Date(),
+      })
+      .where('id = :id AND stage = :stage', {
+        id: applicationId,
+        stage: 'Info requested',
+      })
+      .execute();
+    if (result.affected !== 1) {
+      return {
+        ok: false,
+        error: 'Application is not awaiting information.',
       };
     }
     return { ok: true };

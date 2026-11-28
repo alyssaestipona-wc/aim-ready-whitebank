@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@aim-ready/ui/theme.css";
+
+/* Generate utilities used inside the shared kit. */
+@source "../../../../packages/ui/src";

@@ -8,7 +8,7 @@ export type AccessRole = "branch" | "officer" | "approver" | "ops" | "risk" | "c
 export type SessionRole = AccessRole | "opssup"
 
 export type RouteKey =
-  | "queues" | "sla" | "approvals"
+  | "queues" | "sla" | "approvals" | "live-approvals"
   | "apps" | "new-app" | "intake" | "live-apps"
   | "signing" | "booking" | "disbursements" | "exceptions"
   | "dash-funnel" | "dash-sla" | "dash-decision" | "dash-reg"
@@ -28,6 +28,7 @@ export const NAV: NavGroup[] = [
       { key: "queues", label: "Work queues", path: "/queues", roles: W },
       { key: "sla", label: "SLA watch", path: "/sla", roles: W },
       { key: "approvals", label: "Approvals", path: "/approvals", roles: ["approver", "compliance"] },
+      { key: "live-approvals", label: "Real approvals", path: "/live-approvals", roles: ["approver"] },
     ],
   },
   {

@@ -1,6 +1,6 @@
 "use client"
 
-import { Badge, Button, Card, Checkbox, Input, NativeSelect, NativeSelectOption, Textarea, useToast, PageHeader } from "@aim-ready/ui"
+import { Badge, Button, Card, Checkbox, ConfirmDialog, Input, NativeSelect, NativeSelectOption, Textarea, useToast, PageHeader } from "@aim-ready/ui"
 import { formatPeso, fromCentavos, toCentavos } from "@aim-ready/core"
 import { INFO_REQUEST_ITEMS, OVERRIDE_REASON_CODES, type StaffApplicationDetail } from "@aim-ready/contracts"
 import { useParams } from "next/navigation"
@@ -13,6 +13,7 @@ import { decodeSessionToken } from "@/lib/decode-session-token"
 import {
   decideApplication,
   getApplication,
+  previewApproval,
   recommendApplication,
   requestInfo,
   resolveInfo,
@@ -69,6 +70,8 @@ export default function LiveApplicationDetailPage() {
   const [recTenor, setRecTenor] = React.useState("")
   const [recReasonCode, setRecReasonCode] = React.useState("")
   const [recNote, setRecNote] = React.useState("")
+  const [approveOpen, setApproveOpen] = React.useState(false)
+  const [approvePreview, setApprovePreview] = React.useState<{ monthlyPayment: number } | { error: string } | null>(null)
 
   const load = React.useCallback(async () => {
     const res = await getApplication(params.id)
@@ -97,8 +100,8 @@ export default function LiveApplicationDetailPage() {
     }
   }, [params.id])
 
-  async function decide(decision: "approve" | "decline") {
-    if (decision === "decline" && !reasonCode) {
+  async function decide(decision: "decline") {
+    if (!reasonCode) {
       toast("Choose a reason before declining.", "bad")
       return
     }
@@ -108,17 +111,13 @@ export default function LiveApplicationDetailPage() {
     }
     setSubmitting(true)
     try {
-      const res = await decideApplication(params.id, { decision, reasonCode: reasonCode || undefined })
+      const res = await decideApplication(params.id, { decision, reasonCode })
       if (!res.ok) {
         toast(res.error, "bad")
         return
       }
       setReasonCode("")
-      if (res.data.ok && res.data.stage === "Offer") {
-        toast(`Approved — monthly repayment ${formatPeso(res.data.monthlyPayment)}.`)
-      } else {
-        toast("Application declined.")
-      }
+      toast("Application declined.")
       // Keep the actions disabled (`submitting`) until this reload lands,
       // so the stage-gated Approve/Decline controls can't be clicked again
       // on stale data before they know the application was already decided.
@@ -126,6 +125,42 @@ export default function LiveApplicationDetailPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  /**
+   * Opens the confirm-before-send dialog and fetches the real repayment
+   * preview (WF-9: "shows the monthly repayment and requires confirmation
+   * before the offer is sent"). The segregation-of-duties check runs here,
+   * before the dialog opens, so an approver blocked from approving their
+   * own recommendation sees the same immediate inline error as before,
+   * without a network call or a dialog that would only refuse on confirm.
+   */
+  async function openApproveConfirm() {
+    if (data?.recommendation?.by === currentSub()) {
+      toast("You recommended this case. A different approver must decide it.", "bad")
+      return
+    }
+    setApproveOpen(true)
+    setApprovePreview(null)
+    const res = await previewApproval(params.id)
+    if (!res.ok) {
+      setApprovePreview({ error: res.error })
+    } else if (!res.data.ok) {
+      setApprovePreview({ error: res.data.error })
+    } else {
+      setApprovePreview({ monthlyPayment: res.data.monthlyPayment })
+    }
+  }
+
+  /** `ConfirmDialog`'s own contract: return an error string to keep it open, nothing to close it. */
+  async function confirmApprove(): Promise<string | undefined> {
+    const res = await decideApplication(params.id, { decision: "approve" })
+    if (!res.ok) return res.error
+    if (res.data.ok && res.data.stage === "Offer") {
+      toast(`Approved — monthly repayment ${formatPeso(res.data.monthlyPayment)}.`)
+    }
+    await load()
+    return undefined
   }
 
   async function returnCase() {
@@ -256,7 +291,7 @@ export default function LiveApplicationDetailPage() {
               <Button variant="ghost" disabled={submitting} onClick={() => decide("decline")}>
                 Decline
               </Button>
-              <Button disabled={submitting} onClick={() => decide("approve")}>
+              <Button disabled={submitting} onClick={() => openApproveConfirm()}>
                 Approve
               </Button>
             </>
@@ -454,6 +489,23 @@ export default function LiveApplicationDetailPage() {
           </tbody>
         </table>
       </Card>
+      <ConfirmDialog
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        title="Approve this application?"
+        okLabel="Confirm approval"
+        onConfirm={confirmApprove}
+      >
+        {approvePreview === null ? (
+          <p>Calculating the monthly repayment…</p>
+        ) : "error" in approvePreview ? (
+          <p role="alert">{approvePreview.error}</p>
+        ) : (
+          <p>
+            Monthly repayment: <b>{formatPeso(approvePreview.monthlyPayment)}</b>. The borrower will see this offer once confirmed.
+          </p>
+        )}
+      </ConfirmDialog>
     </>
   )
 }

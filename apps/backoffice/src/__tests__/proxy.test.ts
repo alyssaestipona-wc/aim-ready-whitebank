@@ -85,6 +85,12 @@ describe("proxy", () => {
     expect(rewriteTo(proxy(req("/live-applications/app-1", "officer")))).toBeNull()
   })
 
+  it("lets the real approvals queue through for the approver role only", () => {
+    expect(rewriteTo(proxy(req("/live-approvals", "approver")))).toBeNull()
+    expect(rewriteTo(proxy(req("/live-approvals", "officer")))).toContain("/denied")
+    expect(rewriteTo(proxy(req("/live-approvals", "compliance")))).toContain("/denied")
+  })
+
   it("refuses AI models for everyone when the module flag is off", () => {
     expect(rewriteTo(proxy(req("/config/models", "risk", "ai")))).toBeNull()
     expect(rewriteTo(proxy(req("/config/models", "risk", "")))).toContain("/denied")

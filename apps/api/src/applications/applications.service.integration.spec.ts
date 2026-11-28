@@ -1070,6 +1070,285 @@ describe('ApplicationsService (integration)', () => {
     });
   });
 
+  describe('approvalsSummary', () => {
+    const RECOMMENDER_ID = '55555555-5555-5555-5555-555555555555';
+    const HOUR_MS = 60 * 60 * 1000;
+    const DAY_MS = 24 * HOUR_MS;
+
+    const decidedApp = (
+      decidedAt: Date,
+      recommendedAt: Date,
+      overrideLevel: 'above' | 'below' | null = null,
+      over: Partial<ApplicationEntity> = {},
+    ) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          // Terminal (not an OPEN_STAGES member) so several of these for the
+          // same borrower+product never collide with the duplicate-open-
+          // application unique index - approvalsSummary only cares about
+          // decidedAt/recommendation, never the final stage value.
+          stage: 'Declined' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          decidedAt,
+          reviewerId: RECOMMENDER_ID,
+          recommendation: {
+            by: RECOMMENDER_ID,
+            decision: 'approve',
+            amount: 15_000_000,
+            tenor: 24,
+            reasonCode: overrideLevel ? 'reason' : null,
+            overrideLevel,
+            note: null,
+            recommendedAt: recommendedAt.toISOString(),
+          },
+          ...over,
+        }),
+      );
+
+    it('returns zeros and a null median for a tenant with no activity', async () => {
+      const result = await service.approvalsSummary(user());
+      expect(result).toEqual({
+        waitingOnMe: 0,
+        decidedToday: 0,
+        overridesThisWeek: 0,
+        medianMinutesToDecide: null,
+      });
+    });
+
+    it('counts applications currently waiting in Approval stage', async () => {
+      await applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Approval' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: null,
+        }),
+      );
+      const result = await service.approvalsSummary(user());
+      expect(result.waitingOnMe).toBe(1);
+    });
+
+    it('counts only applications decided today, overrides this week, and computes the median decision time', async () => {
+      const now = new Date();
+      // Decided today, 30 minutes after recommendation, no override.
+      await decidedApp(now, new Date(now.getTime() - 30 * 60 * 1000));
+      // Decided today, 90 minutes after recommendation, an override.
+      await decidedApp(now, new Date(now.getTime() - 90 * 60 * 1000), 'above', {
+        productCode: 'SL',
+      });
+      // Decided 3 days ago (still this week), not today.
+      await decidedApp(
+        new Date(now.getTime() - 3 * DAY_MS),
+        new Date(now.getTime() - 3 * DAY_MS - 60 * 60 * 1000),
+        null,
+        { productCode: 'PL', amount: 16_000_000 },
+      );
+      // Decided 10 days ago - outside the 7-day window entirely.
+      await decidedApp(
+        new Date(now.getTime() - 10 * DAY_MS),
+        new Date(now.getTime() - 10 * DAY_MS - 60 * 60 * 1000),
+        'below',
+        { productCode: 'SL', amount: 9_000_000 },
+      );
+
+      const result = await service.approvalsSummary(user());
+      expect(result.decidedToday).toBe(2);
+      expect(result.overridesThisWeek).toBe(1);
+      // Three decisions within the 7-day window: 30, 90, and 60 minutes - median is 60.
+      expect(result.medianMinutesToDecide).toBe(60);
+    });
+
+    it("never counts another tenant's applications", async () => {
+      await applications.save(
+        applications.create({
+          tenantId: 'another-tenant',
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Approval' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: null,
+        }),
+      );
+      const result = await service.approvalsSummary(user());
+      expect(result.waitingOnMe).toBe(0);
+    });
+
+    it('throws a distinct failure when the application store is unreachable', async () => {
+      const brokenApplications = {
+        count: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+        tenantConfig,
+      );
+      await expect(
+        brokenService.approvalsSummary(user()),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
+  describe('previewApproval', () => {
+    const RECOMMENDER_ID = '55555555-5555-5555-5555-555555555555';
+
+    const recommended = (
+      over: Partial<ApplicationEntity> = {},
+      recOver: Partial<Recommendation> = {},
+    ) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Approval' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          ...over,
+          recommendation: {
+            by: RECOMMENDER_ID,
+            decision: 'approve',
+            amount: 15_000_000,
+            tenor: 24,
+            reasonCode: null,
+            overrideLevel: null,
+            note: null,
+            recommendedAt: new Date().toISOString(),
+            ...recOver,
+          },
+        }),
+      );
+
+    it('writes nothing - the application stays in Approval, undecided', async () => {
+      const app = await recommended();
+      const preview = await service.previewApproval(user(), app.id);
+      if (!preview.ok) throw new Error('expected a preview');
+      expect(preview.monthlyPayment).toBeGreaterThan(0);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Approval');
+      expect(stored?.decidedAt).toBeNull();
+    });
+
+    it('previews exactly the monthly repayment decide() itself produces on approval', async () => {
+      const app = await recommended();
+      const preview = await service.previewApproval(user(), app.id);
+      if (!preview.ok) throw new Error('expected a preview');
+      const decideResult = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      if (!decideResult.ok || decideResult.stage !== 'Offer') {
+        throw new Error('expected an approval');
+      }
+      expect(decideResult.monthlyPayment).toBe(preview.monthlyPayment);
+    });
+
+    it('refuses to preview own recommendation (segregation of duties), the same rule decide() itself enforces', async () => {
+      const app = await recommended({}, { by: borrowerId });
+      const preview = await service.previewApproval(user(), app.id);
+      expect(preview).toEqual({
+        ok: false,
+        error:
+          'You recommended this case. A different approver must decide it.',
+      });
+    });
+
+    it('refuses to preview an application not in Approval', async () => {
+      const app = await applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: null,
+        }),
+      );
+      await expect(
+        service.previewApproval(user(), app.id),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('refuses to preview an Approval-stage application with no recommendation', async () => {
+      const app = await applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Approval' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          recommendation: null,
+        }),
+      );
+      await expect(
+        service.previewApproval(user(), app.id),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("refuses to preview another tenant's application, same as a missing one", async () => {
+      const app = await recommended();
+      await expect(
+        service.previewApproval(
+          { sub: borrowerId, tenantId: 'another-tenant' },
+          app.id,
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws a distinct failure when the application store is unreachable', async () => {
+      const brokenApplications = {
+        findOne: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+        tenantConfig,
+      );
+      await expect(
+        brokenService.previewApproval(
+          user(),
+          '11111111-1111-1111-1111-111111111111',
+        ),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
   describe('findMineForBorrower', () => {
     it("returns only the caller's own applications for their tenant", async () => {
       const result = await service.create(user(), validDto());

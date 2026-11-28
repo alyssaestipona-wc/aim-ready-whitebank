@@ -16,6 +16,8 @@ import type { RequestWithSession } from '../auth/guards/session-role.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
   ApplicationsService,
+  type ApprovalsSummary,
+  type ApprovePreviewResult,
   type BorrowerApplicationListItem,
   type DecideApplicationResult,
   type PickApplicationResult,
@@ -86,6 +88,17 @@ export class ApplicationsController {
     });
   }
 
+  // Declared before `GET /:id` for the same reason as `mine` above.
+  @Get('approvals-summary')
+  @Roles('approver')
+  approvalsSummary(@Req() req: RequestWithSession): Promise<ApprovalsSummary> {
+    const user = req.user!;
+    return this.applications.approvalsSummary({
+      sub: user.sub,
+      tenantId: user.tenantId,
+    });
+  }
+
   @Get(':id')
   @Roles(...STAFF_ROLES)
   detail(
@@ -137,6 +150,19 @@ export class ApplicationsController {
   ): Promise<ReturnToOfficerResult> {
     const user = req.user!;
     return this.applications.returnToOfficer(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
+    );
+  }
+
+  @Get(':id/approve-preview')
+  @Roles('approver')
+  approvePreview(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+  ): Promise<ApprovePreviewResult> {
+    const user = req.user!;
+    return this.applications.previewApproval(
       { sub: user.sub, tenantId: user.tenantId },
       id,
     );

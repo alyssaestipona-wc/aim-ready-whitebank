@@ -58,6 +58,8 @@ describe('Applications role enforcement (e2e)', () => {
     ['PATCH', `/applications/${FAKE_ID}/recommend`, 'approver'],
     ['PATCH', `/applications/${FAKE_ID}/return`, 'officer'],
     ['GET', '/applications/mine', 'officer'],
+    ['GET', '/applications/approvals-summary', 'officer'],
+    ['GET', `/applications/${FAKE_ID}/approve-preview`, 'officer'],
   ])(
     '%s %s rejects a %s-role session with 401, and records the refusal',
     async (method, path, wrongRole) => {

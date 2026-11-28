@@ -61,4 +61,9 @@ describe('ApplicationsController roles', () => {
   it('restricts returnToOfficer to the approver role only, not every staff role', () => {
     expect(rolesOf(proto.returnToOfficer)).toEqual(['approver']);
   });
+
+  it('restricts approvalsSummary and approvePreview to the approver role only, not every staff role', () => {
+    expect(rolesOf(proto.approvalsSummary)).toEqual(['approver']);
+    expect(rolesOf(proto.approvePreview)).toEqual(['approver']);
+  });
 });

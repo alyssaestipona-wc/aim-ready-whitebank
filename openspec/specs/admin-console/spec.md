@@ -10,7 +10,7 @@ phase every screen runs on simulated data.
 ## Requirements
 
 ### Requirement: Admin sign-in is two-step
-The console SHALL ask for email and password first, then a six-digit authentication code, matching the staff console's sign-in pattern. It SHALL accept only the single seeded tenant-administrator account. The page SHALL NOT list demo accounts and SHALL NOT share a session with the staff console.
+The console SHALL ask for email and password first, checked against the real identity service (`api-auth`) rather than an in-memory mock array, then a six-digit authentication code verified the same way. It SHALL accept only the single seeded tenant-administrator account. The page SHALL NOT list demo accounts and SHALL NOT share a session with the staff console.
 
 #### Scenario: Wrong password
 - **GIVEN** the admin console's sign-in page
@@ -25,12 +25,17 @@ The console SHALL ask for email and password first, then a six-digit authenticat
 #### Scenario: Successful sign-in lands on Products
 - **GIVEN** the code step for the seeded administrator
 - **WHEN** the code step completes
-- **THEN** the administrator lands on Products
+- **THEN** the identity service issues a session, the console stores it in `wbl_admin_session`, and the administrator lands on Products
 
 #### Scenario: Staff or borrower credentials are refused here
 - **GIVEN** the admin console's sign-in page
 - **WHEN** a staff or borrower email is submitted with its own correct password
 - **THEN** a red inline error "Email or password is incorrect." is shown, identical to an unknown email, so neither email's existence is revealed
+
+#### Scenario: Identity service unavailable
+- **GIVEN** the admin console's sign-in page at either step
+- **WHEN** credentials or a code are submitted while the identity service is unreachable
+- **THEN** a distinct "We can't sign you in right now. Try again shortly." error is shown, not the generic incorrect-credentials message
 
 ### Requirement: Admin routes are checked on the server
 Every admin console route other than sign-in SHALL be reachable only with a valid admin session, checked server-side before the page renders, the same placeholder-session pattern the staff console uses with its own, separately named session cookie.

@@ -13,6 +13,9 @@ export const TENANT: TenantId = "kalinaw"
 /** Demo password for both seeded borrower accounts. */
 export const DEMO_PASSWORD = "kalinaw2026"
 
+/** The real identity service (apps/api); client-side, so this must be a public env var. */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000"
+
 /** Shown in every timestamp; the prototype is pinned to this day. */
 export const TODAY = "27 Nov"
 

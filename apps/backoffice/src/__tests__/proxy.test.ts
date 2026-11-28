@@ -1,12 +1,25 @@
 // @vitest-environment node
+import { createHmac } from "node:crypto"
+
 import { NextRequest } from "next/server"
 import { describe, expect, it } from "vitest"
 
 import { LANDING, pathOf, type SessionRole } from "../lib/access"
 import { proxy } from "../proxy"
 
+/** Mirrors apps/api's TokenService signing scheme, test-only. */
+function signToken(role: SessionRole): string {
+  const secret = process.env.AUTH_JWT_SECRET ?? "dev-only-insecure-secret-change-me"
+  const base64url = (s: string) => Buffer.from(s, "utf8").toString("base64url")
+  const iat = Math.floor(Date.now() / 1000)
+  const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }))
+  const body = base64url(JSON.stringify({ sub: role, tenantId: "kalinaw", appScope: "staff", role, email: `${role}@kalinawbank.ph`, typ: "session", iat, exp: iat + 3600 }))
+  const signature = createHmac("sha256", secret).update(`${header}.${body}`).digest("base64url")
+  return `${header}.${body}.${signature}`
+}
+
 function req(path: string, role?: SessionRole, flags?: string) {
-  const cookies = [role ? `wbl_staff_session=${role}` : "", flags !== undefined ? `wbl_flags=${flags}` : ""].filter(Boolean).join("; ")
+  const cookies = [role ? `wbl_staff_session=${signToken(role)}` : "", flags !== undefined ? `wbl_flags=${flags}` : ""].filter(Boolean).join("; ")
   return new NextRequest(new URL(path, "http://localhost:3001"), { headers: cookies ? { cookie: cookies } : {} })
 }
 
@@ -38,6 +51,22 @@ describe("proxy", () => {
 
   it.each(CASES)("signed-out request for %s's routes goes to sign-in", (_role, ok) => {
     expect(redirectTo(proxy(req(ok)))).toBe("http://localhost:3001/sign-in")
+  })
+
+  it("redirects a request with an invalid or unsigned token", () => {
+    const res = new NextRequest(new URL("/queues", "http://localhost:3001"), { headers: { cookie: "wbl_staff_session=officer" } })
+    expect(redirectTo(proxy(res))).toBe("http://localhost:3001/sign-in")
+  })
+
+  it("redirects a request carrying a different app's valid-looking token", () => {
+    const iat = Math.floor(Date.now() / 1000)
+    const secret = process.env.AUTH_JWT_SECRET ?? "dev-only-insecure-secret-change-me"
+    const base64url = (s: string) => Buffer.from(s, "utf8").toString("base64url")
+    const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }))
+    const body = base64url(JSON.stringify({ sub: "juan", tenantId: "kalinaw", appScope: "borrower", role: "borrower", email: "juan.delacruz@email.com", typ: "session", iat, exp: iat + 3600 }))
+    const borrowerToken = `${header}.${body}.${createHmac("sha256", secret).update(`${header}.${body}`).digest("base64url")}`
+    const res = new NextRequest(new URL("/queues", "http://localhost:3001"), { headers: { cookie: `wbl_staff_session=${borrowerToken}` } })
+    expect(redirectTo(proxy(res))).toBe("http://localhost:3001/sign-in")
   })
 
   it("sends a signed-in user from sign-in and root to their landing screen", () => {

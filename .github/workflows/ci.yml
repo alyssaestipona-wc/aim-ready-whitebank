@@ -13,6 +13,20 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aimready
+          POSTGRES_PASSWORD: aimready_dev
+          POSTGRES_DB: aimready
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aimready"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,5 +52,17 @@ jobs:
       - name: Build
         run: pnpm turbo run build
 
+      - name: Create apps/api's test database
+        env:
+          PGPASSWORD: aimready_dev
+        run: psql -h localhost -U aimready -d aimready -c "CREATE DATABASE aimready_test;"
+
+      - name: Run apps/api migrations (dev and test databases)
+        run: |
+          pnpm --filter api migration:run
+          DB_NAME=aimready_test pnpm --filter api migration:run
+
       - name: Test
         run: pnpm turbo run test
+        env:
+          DB_NAME: aimready_test

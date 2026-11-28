@@ -9,7 +9,7 @@ export { BANK_NAME, CUSTOMERS, DECLINE_CODES, FINDINGS, HOLIDAYS, OVERRIDE_THRES
 export { baseRole, findApp, hrsLeft, isAdmin, isClosed, isReadOnly, me, peso, policyOf, prodName, products, termsOf } from "./engine"
 export { roleOf, tOrd, MODEL_VERSION } from "./seed"
 export { counts, myQueue, staffNotifs, teamQueue, unassigned, type StaffNotification } from "./selectors"
-export { getSessionRole, setFlagsCookie, setSessionRole, useSessionRole } from "./session"
+export { getSessionRole, setFlagsCookie, setSessionRole, setSessionToken, useSessionRole } from "./session"
 export { getState, useStaffState } from "./store"
 export * from "./actions/result"
 export * from "./actions/session"

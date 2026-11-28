@@ -1,9 +1,8 @@
 "use client"
 
-import { BarChart, PageHeader } from "@aim-ready/ui"
+import { BarChart, PageHeader, StaticTable, TabBar } from "@aim-ready/ui"
 import * as React from "react"
 
-import { StaticTable, TabBar } from "@/components/admin/bits"
 import { Kpi, KpiGrid, Section } from "@/components/bits"
 
 type Channel = "all" | "web" | "branch" | "file"

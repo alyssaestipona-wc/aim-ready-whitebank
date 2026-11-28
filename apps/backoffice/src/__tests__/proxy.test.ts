@@ -22,7 +22,6 @@ const CASES: Array<[SessionRole, string, string]> = [
   ["opssup", "/exceptions", "/applications"],
   ["risk", "/config/decisioning", "/compliance/audit"],
   ["compliance", "/compliance/aml", "/applications/new"],
-  ["admin", "/config/users", "/queues"],
 ]
 
 describe("proxy", () => {
@@ -48,15 +47,13 @@ describe("proxy", () => {
     }
   })
 
-  it("lets case pages through for case roles and refuses admin", () => {
+  it("lets case pages through for every case role", () => {
     expect(rewriteTo(proxy(req("/applications/APP-2041", "officer")))).toBeNull()
-    expect(rewriteTo(proxy(req("/applications/APP-2041", "admin")))).toContain("/denied")
   })
 
   it("refuses AI models for everyone when the module flag is off", () => {
     expect(rewriteTo(proxy(req("/config/models", "risk", "ai")))).toBeNull()
     expect(rewriteTo(proxy(req("/config/models", "risk", "")))).toContain("/denied")
-    expect(rewriteTo(proxy(req("/config/models", "admin", "")))).toContain("/denied")
   })
 
   it("lets unknown paths through to not-found", () => {

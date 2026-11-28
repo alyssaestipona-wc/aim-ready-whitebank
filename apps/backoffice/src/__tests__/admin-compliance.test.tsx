@@ -27,7 +27,7 @@ describe("compliance views", () => {
   })
 
   it("audit log filters by action type", async () => {
-    setup("admin", "/compliance/audit")
+    setup("compliance", "/compliance/audit")
     renderWithToasts(<AuditLogPage />)
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Action type" }), "booking")
     rows().forEach((r) => expect(r.textContent).toMatch(/book|disburs|core/i))
@@ -57,9 +57,8 @@ describe("compliance views", () => {
     expect(screen.getByText("Findings")).toBeInTheDocument()
   })
 
-  it("governance is visible to risk but not to admin", () => {
+  it("governance is visible to risk and compliance", () => {
     expect(allowed("risk", "governance")).toBe(true)
     expect(allowed("compliance", "governance")).toBe(true)
-    expect(allowed("admin", "governance")).toBe(false)
   })
 })

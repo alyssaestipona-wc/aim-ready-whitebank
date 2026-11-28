@@ -1,9 +1,8 @@
 "use client"
 
-import { PageHeader } from "@aim-ready/ui"
+import { PageHeader, StaticTable, TabBar, VersionBadge } from "@aim-ready/ui"
 import * as React from "react"
 
-import { StaticTable, TabBar, VersionBadge } from "@/components/admin/bits"
 import { Section } from "@/components/bits"
 import { OVERRIDE_THRESHOLD, peso } from "@/mock"
 

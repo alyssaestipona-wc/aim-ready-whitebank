@@ -1,26 +1,48 @@
 "use client"
 
-import { PageHeader } from "@aim-ready/ui"
+import { PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, VersionBadge } from "@aim-ready/ui"
+import { useRouter } from "next/navigation"
 
-import { StaticTable, VersionBadge } from "@/components/admin/bits"
 import { Section } from "@/components/bits"
+import { useConsole } from "@/components/use-console"
+import { canConfigureTemplates } from "@/mock"
 
-const TEMPLATES: Array<[string, string, string, string]> = [
-  ["Loan agreement", "All products", "Closure + 10 years", "v5"],
-  ["Disclosure statement (Truth in Lending)", "All products", "Closure + 10 years", "v3"],
-  ["Promissory note", "All products", "Closure + 10 years", "v2"],
-  ["Approval letter", "Referred cases", "Closure + 5 years", "v2"],
-  ["Decline letter", "Declined cases", "5 years", "v4"],
-]
-
-/** Read-only in this port: templates have no edit or publish path. */
+/** Rows link into each template's detail page (PC-5): editable there for the administrator, read-only for everyone else. */
 export default function TemplatesPage() {
+  const ctx = useConsole()
+  const router = useRouter()
+  if (!ctx) return null
+  const { role, s } = ctx
+  const can = canConfigureTemplates(role)
   return (
     <>
-      <PageHeader eyebrow="Configuration" title="Documents and templates" description="Templates with merge fields and their retention periods. Editing creates a new version; documents already generated keep theirs." />
+      <PageHeader eyebrow="Configuration" title="Documents and templates" description="Templates with merge fields and their retention periods. Open one to view its detail page; editing is the admin console's." />
       <Section flush>
-        <StaticTable head={["Template", "Used for", "Retention", "Version"]} rows={TEMPLATES.map((r) => [<b key="t" className="font-semibold text-strong">{r[0]}</b>, r[1], r[2], <VersionBadge key="v" status="Published" version={r[3]} />])} />
+        <Table aria-label="Documents and templates">
+          <TableHeader>
+            <tr>
+              {["Template", "Used for", "Retention", "Version"].map((h) => (
+                <TableHead key={h}>{h}</TableHead>
+              ))}
+            </tr>
+          </TableHeader>
+          <TableBody>
+            {s.cfg.templates.map((t) => (
+              <TableRow key={t.id} onActivate={() => router.push(`/config/templates/${t.id}`)}>
+                <TableCell>
+                  <b className="font-semibold text-strong">{t.name}</b>
+                </TableCell>
+                <TableCell>{t.usedFor}</TableCell>
+                <TableCell>{t.retention}</TableCell>
+                <TableCell>
+                  <VersionBadge status="Published" version={t.version} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Section>
+      {!can && <p className="mt-2.5 text-xs text-muted-foreground">Tenant administrator only — view only here.</p>}
     </>
   )
 }

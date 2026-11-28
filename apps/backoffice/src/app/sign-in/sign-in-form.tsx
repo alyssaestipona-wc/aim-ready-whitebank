@@ -6,8 +6,8 @@ import * as React from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { checkCredentials, verifyCode, USERS, type RoleKey } from "@/mock"
-import { pathOf, LANDING } from "@/lib/access"
+import { checkCredentials, verifyCode, USERS } from "@/mock"
+import { pathOf, LANDING, type SessionRole } from "@/lib/access"
 import { navigateHard } from "@/lib/navigation"
 
 const credentialsSchema = z.object({ email: z.string(), password: z.string() })
@@ -15,7 +15,7 @@ const codeSchema = z.object({ code: z.string() })
 
 /** Two-step staff sign-in: email and password, then the authenticator code. */
 export function SignInForm() {
-  const [step, setStep] = React.useState<{ role: RoleKey; email: string } | null>(null)
+  const [step, setStep] = React.useState<{ role: SessionRole; email: string } | null>(null)
   const [error, setError] = React.useState("")
   const creds = useForm<z.infer<typeof credentialsSchema>>({ resolver: zodResolver(credentialsSchema), defaultValues: { email: "", password: "" } })
   const code = useForm<z.infer<typeof codeSchema>>({ resolver: zodResolver(codeSchema), defaultValues: { code: "" } })

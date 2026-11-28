@@ -1,23 +1,19 @@
 "use client"
 
-import { Button, ConfirmDialog, Input, Label, ListView, NativeSelect, NativeSelectOption, PageHeader, StatusPill, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, cn, type ListFilterDef } from "@aim-ready/ui"
+import { Button, ConfirmDialog, Input, Label, ListView, NativeSelect, NativeSelectOption, PageHeader, StatusPill, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, cn, type ListFilterDef, CfgButton, CheckRow, DraftBar, SimulatedCheckNote, TabBar, Toggle, Track, VersionBadge, useRun } from "@aim-ready/ui"
 import * as React from "react"
 
-import { CfgButton, CheckRow, DraftBar, SimulatedCheckNote, TabBar, Toggle, Track, VersionBadge, useRun } from "@/components/admin/bits"
 import { OutcomePill, Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
 import {
   addDraftRule,
   canConfigure,
-  canPublishRuleSet,
   createRuleDraft,
   discardRuleDraft,
   harness,
   isClosed,
   isReadOnly,
   LOCKED_TRIGGERS,
-  me,
-  publishRuleSet,
   setDraftBand,
   setDraftDti,
   submitRuleDraft,
@@ -47,7 +43,6 @@ export default function DecisioningPage() {
   const ctx = useConsole()
   const run = useRun()
   const [tab, setTab] = React.useState<Tab>("rules")
-  const [publishOpen, setPublishOpen] = React.useState(false)
   const [ruleOpen, setRuleOpen] = React.useState(false)
   const [rule, setRule] = React.useState({ name: "New-to-bank applicants with high debt-to-income", type: "Referral trigger" as "Referral trigger" | "Knockout", logic: "AND" as "AND" | "OR" })
   const [conds, setConds] = React.useState<Cond[]>([
@@ -68,7 +63,6 @@ export default function DecisioningPage() {
   const trg = D ? D.triggers || C.triggers : C.triggers
   const status = D ? (C.ruleset.inReview ? "In review" : "Draft") : "Published"
   const nv = `v${Number(C.ruleset.pub.slice(1)) + 1}`
-  const mine = C.ruleset.author === me(role).name
   const tabNow: Tab = tab === "diff" && !D ? "rules" : tab
   const inflight = s.apps.filter((a) => !isClosed(a)).length
   const pct = (v: number) => ((v - 450) / 370) * 100
@@ -91,16 +85,16 @@ export default function DecisioningPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Configuration" title="Decisioning" description="Policy rules, decision bands, referral triggers and reason codes. Every change is versioned and needs a second person to publish." />
+      <PageHeader eyebrow="Configuration" title="Decisioning" description="Policy rules, decision bands, referral triggers and reason codes. Every change is versioned and needs the tenant administrator to publish." />
       <DraftBar>
         <VersionBadge status="Published" version={C.ruleset.pub} />
         {D && <VersionBadge status={status} version={nv} />}
         <span className="min-w-[200px] flex-1 text-sm text-muted-foreground">
           {D
             ? C.ruleset.inReview
-              ? `Submitted by ${C.ruleset.author}. ${C.ruleset.author === "Jonas Mercado" ? "Rafael Cruz" : "Jonas Mercado"} approves.`
+              ? "Submitted for review. The tenant administrator approves and publishes it in the admin console."
               : `Editing a draft. Live decisions still use ${C.ruleset.pub}.`
-            : "Credit risk or the tenant administrator drafts; the other approves. Changes apply to new applications only."}
+            : "Credit risk drafts; the tenant administrator approves and publishes it in the admin console. Changes apply to new applications only."}
         </span>
         {!D && (
           <CfgButton readOnly={ro} disabled={!can} onClick={() => run(createRuleDraft())}>
@@ -114,25 +108,6 @@ export default function DecisioningPage() {
             </CfgButton>
             <CfgButton readOnly={ro} disabled={!can} variant="primary" onClick={() => run(submitRuleDraft())}>
               Submit for review
-            </CfgButton>
-          </>
-        )}
-        {D && C.ruleset.inReview && (
-          <>
-            <CfgButton readOnly={ro} disabled={!can || mine} onClick={() => run(discardRuleDraft())}>
-              Return to author
-            </CfgButton>
-            <CfgButton
-              readOnly={ro}
-              variant="primary"
-              disabled={!can || mine}
-              title={mine ? "You submitted this change; a different person must approve it" : undefined}
-              onClick={async () => {
-                const r = await run(canPublishRuleSet())
-                if (r.ok) setPublishOpen(true)
-              }}
-            >
-              Approve and publish
             </CfgButton>
           </>
         )}
@@ -307,18 +282,6 @@ export default function DecisioningPage() {
           )}
         </Section>
       )}
-
-      <ConfirmDialog
-        open={publishOpen}
-        onOpenChange={setPublishOpen}
-        title={`Publish rule set ${nv}?`}
-        description={`New applications use it immediately. ${inflight} in-flight applications stay on ${C.ruleset.pub}.`}
-        okLabel="Approve and publish"
-        onConfirm={async () => {
-          const r = await run(publishRuleSet())
-          if (!r.ok) return r.error
-        }}
-      />
 
       <ConfirmDialog
         open={ruleOpen}

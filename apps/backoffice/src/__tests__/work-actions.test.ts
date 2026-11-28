@@ -332,7 +332,7 @@ describe("default-deny on every case action", () => {
     ["submitAssisted by ops", "ops", async (m: typeof import("@/mock")) => m.submitAssisted(m.blankAssisted(), null)],
     ["intake upload by compliance", "compliance", async (m: typeof import("@/mock")) => m.uploadPartnerSpreadsheet()],
     ["CIC generate by an officer", "officer", async (m: typeof import("@/mock")) => m.generateCic()],
-    ["AML export by admin", "admin", async (m: typeof import("@/mock")) => m.exportAml(0)],
+    ["AML export by a non-compliance role", "risk", async (m: typeof import("@/mock")) => m.exportAml(0)],
     ["CIC fix by compliance", "compliance", async (m: typeof import("@/mock")) => m.fixCic()],
     ["CIC submit by an officer", "officer", async (m: typeof import("@/mock")) => m.submitCic()],
     ["email bundle by ops", "ops", async (m: typeof import("@/mock")) => m.uploadEmailBundle()],
@@ -355,22 +355,18 @@ describe("default-deny on every case action", () => {
 
 describe("configuration maker-checker cannot be bypassed", () => {
   it.each([
-    ["resubmitting a product draft in review", "admin", async (m: typeof import("@/mock")) => {
-      m.setSessionRole("risk")
+    ["resubmitting a product draft in review", "risk", async (m: typeof import("@/mock")) => {
       await m.createProductDraft("PL")
       await m.submitProductDraft()
-      m.setSessionRole("admin")
       return m.submitProductDraft()
     }],
-    ["creating a product draft over an open one", "admin", async (m: typeof import("@/mock")) => {
+    ["creating a product draft over an open one", "risk", async (m: typeof import("@/mock")) => {
       await m.createProductDraft("PL")
       return m.createProductDraft("SL")
     }],
-    ["resubmitting a rule set in review", "admin", async (m: typeof import("@/mock")) => {
-      m.setSessionRole("risk")
+    ["resubmitting a rule set in review", "risk", async (m: typeof import("@/mock")) => {
       await m.createRuleDraft()
       await m.submitRuleDraft()
-      m.setSessionRole("admin")
       return m.submitRuleDraft()
     }],
     ["replacing an open rule set draft", "risk", async (m: typeof import("@/mock")) => {
@@ -392,12 +388,11 @@ describe("configuration maker-checker cannot be bypassed", () => {
     expect(await act(await import("@/mock"))).toMatchObject({ ok: false })
   })
 
-  it("keeps the original author when someone else tries to resubmit", async () => {
+  it("keeps the original author when a resubmit of an in-review draft is refused", async () => {
     const m = await import("@/mock")
     setup("risk")
     await m.createProductDraft("PL")
     await m.submitProductDraft()
-    m.setSessionRole("admin")
     await m.submitProductDraft()
     expect(getState().pdraft?.author).toBe("Rafael Cruz")
   })

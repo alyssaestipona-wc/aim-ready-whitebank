@@ -10,7 +10,7 @@ import { update } from "@/mock/store"
 import { renderWithToasts, setup } from "./helpers"
 import { nav } from "./nav-mock"
 
-const ROLES: SessionRole[] = ["branch", "officer", "approver", "ops", "opssup", "risk", "compliance", "admin"]
+const ROLES: SessionRole[] = ["branch", "officer", "approver", "ops", "opssup", "risk", "compliance"]
 
 describe("console shell", () => {
   it.each(ROLES)("%s sees exactly the routes the access map grants", (role) => {
@@ -27,6 +27,13 @@ describe("console shell", () => {
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument()
     expect(screen.queryByText(/Guided demo/)).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Borrower web app" })).toBeInTheDocument()
+  })
+
+  it("links to the admin console and the borrower web app", () => {
+    setup("officer", "/queues")
+    renderWithToasts(<ConsoleShell>content</ConsoleShell>)
+    expect(screen.getByRole("link", { name: "Admin console" })).toHaveAttribute("href", "http://localhost:3003")
+    expect(screen.getByRole("link", { name: "Borrower web app" })).toHaveAttribute("href", "http://localhost:3002")
   })
 
   it("signs out from the sidebar button and clears the cookie", async () => {

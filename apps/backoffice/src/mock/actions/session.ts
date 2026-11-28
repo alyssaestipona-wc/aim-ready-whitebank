@@ -1,5 +1,6 @@
 "use client"
 
+import type { SessionRole } from "../../lib/access"
 import { DEMO_PASSWORD, USERS } from "../constants"
 import { me, now } from "../engine"
 import { getSessionRole, setFlagsCookie, setSessionRole } from "../session"
@@ -10,12 +11,14 @@ import { fail, ok, type ActionResult } from "./result"
 /**
  * Step 1 of sign-in: email and password. On success returns the role whose
  * authentication code is now expected. The password is the shared demo
- * password for seeded accounts (sample data only).
+ * password for seeded accounts (sample data only). The seeded administrator
+ * account still exists in `USERS` (6.6), but signs in only at `apps/admin`.
  */
-export async function checkCredentials(email: string, password: string): Promise<{ ok: true; role: RoleKey } | { ok: false; error: string }> {
+export async function checkCredentials(email: string, password: string): Promise<{ ok: true; role: SessionRole } | { ok: false; error: string }> {
   const e = email.trim().toLowerCase()
+  if (e === USERS.admin.email) return { ok: false, error: "Tenant administrators sign in at the separate admin console." }
   const role = (Object.keys(USERS) as RoleKey[]).find((k) => USERS[k].email === e)
-  if (!role || password !== DEMO_PASSWORD) return { ok: false, error: "Email or password is incorrect." }
+  if (!role || role === "admin" || password !== DEMO_PASSWORD) return { ok: false, error: "Email or password is incorrect." }
   return { ok: true, role }
 }
 
@@ -23,7 +26,7 @@ export async function checkCredentials(email: string, password: string): Promise
  * Step 2: the six-digit authenticator code. Any six digits pass in this
  * simulation; the real check is the identity provider's.
  */
-export async function verifyCode(role: RoleKey, code: string): Promise<ActionResult> {
+export async function verifyCode(role: SessionRole, code: string): Promise<ActionResult> {
   if (!/^\d{6}$/.test(code.trim())) return fail("That code is incorrect. Try again.")
   update((s) => {
     s.audit.unshift({ tenantId: s.tenantId, when: now(s), who: USERS[role].name, role: USERS[role].title, what: "Signed in (SSO + MFA)", target: "" })

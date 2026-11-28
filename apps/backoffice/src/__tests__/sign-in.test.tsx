@@ -54,7 +54,7 @@ describe("staff sign-in", () => {
   })
 
   const LANDINGS: Array<[RoleKey, string]> = [
-    ["branch", "/queues"], ["officer", "/queues"], ["approver", "/approvals"], ["ops", "/booking"], ["opssup", "/booking"], ["risk", "/reports/decisioning"], ["compliance", "/compliance/audit"], ["admin", "/config/products"],
+    ["branch", "/queues"], ["officer", "/queues"], ["approver", "/approvals"], ["ops", "/booking"], ["opssup", "/booking"], ["risk", "/reports/decisioning"], ["compliance", "/compliance/audit"],
   ]
   it.each(LANDINGS)("%s lands on %s and the sign-in is audited", async (role, path) => {
     setup(null, "/sign-in")
@@ -65,5 +65,14 @@ describe("staff sign-in", () => {
     expect(getSessionRole()).toBe(role)
     expect(nav.hard).toHaveBeenCalledWith(path)
     expect(getState().audit[0]).toMatchObject({ who: USERS[role].name, what: "Signed in (SSO + MFA)" })
+  })
+
+  it("refuses the tenant administrator's email before the code step, pointing at the admin console", async () => {
+    setup(null, "/sign-in")
+    render(<SignInPage />)
+    await credentials(USERS.admin.email, "kalinaw2026")
+    expect(screen.getByRole("alert")).toHaveTextContent("Tenant administrators sign in at the separate admin console.")
+    expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument()
+    expect(getSessionRole()).toBeNull()
   })
 })

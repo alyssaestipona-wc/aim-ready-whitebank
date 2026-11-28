@@ -1,8 +1,7 @@
 "use client"
 
-import { Card, ListView, PageHeader, StatusPill, type ListFilterDef } from "@aim-ready/ui"
+import { Card, ListView, PageHeader, StatusPill, type ListFilterDef, StaticTable } from "@aim-ready/ui"
 
-import { StaticTable } from "@/components/admin/bits"
 import { Section } from "@/components/bits"
 import { FINDINGS } from "@/mock"
 

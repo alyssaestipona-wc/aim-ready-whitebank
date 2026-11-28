@@ -1,9 +1,8 @@
 "use client"
 
-import { ListView, PageHeader, StatusPill, type ListFilterDef } from "@aim-ready/ui"
+import { ListView, PageHeader, StatusPill, type ListFilterDef, StaticTable, TabBar } from "@aim-ready/ui"
 import * as React from "react"
 
-import { StaticTable, TabBar } from "@/components/admin/bits"
 import { Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
 import { notificationLog } from "@/mock"

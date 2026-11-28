@@ -1,21 +1,17 @@
 "use client"
 
-import { Button, PageHeader, StatusPill } from "@aim-ready/ui"
+import { Button, PageHeader, StatusPill, StaticTable } from "@aim-ready/ui"
 
-import { StaticTable, useRun } from "@/components/admin/bits"
 import { Note, Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
-import { isReadOnly, toggleBureauDrill, toggleCoreDrill } from "@/mock"
 
-/** Read-only except the tenant administrator's failure drills. */
+/** Read-only here: the failure drills moved to the admin console. */
 export default function IntegrationsPage() {
   const ctx = useConsole()
-  const run = useRun()
   if (!ctx) return null
-  const { role, s } = ctx
+  const { s } = ctx
   const C = s.cfg
-  const can = role === "admin"
-  const title = isReadOnly(role) ? "Read-only access" : can ? undefined : "Tenant administrator only"
+  const title = "Tenant administrator only, in the admin console"
   const A: Array<[string, string, string, string, ("bureau" | "core")?]> = [
     ["Credit bureau", "TransUnion PH", C.bureauDown ? "Outage (simulated)" : "Simulated", "42 / 42", "bureau"],
     ["eKYC and liveness", "HyperVerge", "Simulated", "31 / 31"],
@@ -47,11 +43,11 @@ export default function IntegrationsPage() {
             <StatusPill key="m" tone={/Outage|time out/.test(r[2]) ? "bad" : r[2] === "Sandbox" ? "info" : "neutral"}>{r[2]}</StatusPill>,
             <StatusPill key="t" tone="ok">{r[3]} passing</StatusPill>,
             r[4] === "bureau" ? (
-              <Button key="d" size="sm" disabled={!can} title={title} onClick={() => run(toggleBureauDrill())}>
+              <Button key="d" size="sm" disabled title={title}>
                 {C.bureauDown ? "Restore bureau" : "Simulate outage"}
               </Button>
             ) : r[4] === "core" ? (
-              <Button key="d" size="sm" disabled={!can} title={title} onClick={() => run(toggleCoreDrill())}>
+              <Button key="d" size="sm" disabled title={title}>
                 {C.coreFailNext ? "Cancel drill" : "Fail next booking"}
               </Button>
             ) : (

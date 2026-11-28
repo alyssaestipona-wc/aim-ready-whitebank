@@ -1,37 +1,79 @@
 "use client"
 
-import { PageHeader } from "@aim-ready/ui"
+import { CfgButton, CheckRow, ConfirmDialog, Input, Label, PageHeader, StaticTable, VersionBadge, useRun } from "@aim-ready/ui"
+import * as React from "react"
 
-import { CheckRow, StaticTable, VersionBadge } from "@/components/admin/bits"
 import { Section } from "@/components/bits"
-import { OVERRIDE_THRESHOLD, peso, USERS } from "@/mock"
+import { useConsole } from "@/components/use-console"
+import { canConfigure, isReadOnly, OVERRIDE_THRESHOLD, peso, updateMatrixLevel, type AuthorityLevel } from "@/mock"
 
-/** Read-only in this port: the approval matrix has no edit or publish path. */
+/** Each level is directly editable (no draft/submit/review — PC-4 never asks for maker-checker here). */
 export default function MatrixPage() {
-  const a = USERS.approver
-  const grades = a.grades ?? []
+  const ctx = useConsole()
+  const run = useRun()
+  const [editing, setEditing] = React.useState<AuthorityLevel | null>(null)
+  const [fields, setFields] = React.useState({ amount: "", grades: "", exceptions: "" })
+  if (!ctx) return null
+  const { role, s } = ctx
+  const can = canConfigure(role)
+  const ro = isReadOnly(role)
+
+  function openEdit(row: AuthorityLevel) {
+    setEditing(row)
+    setFields({ amount: row.amount, grades: row.grades, exceptions: row.exceptions })
+  }
+
   return (
     <>
       <PageHeader
         eyebrow="Configuration"
         title="Approval matrix"
-        description="Delegated authority by amount, product, grade and exception type. Visible to every permitted role; editable only by credit risk or the tenant administrator."
-        actions={<VersionBadge status="Published" version="v2" />}
+        description="Delegated authority by amount, product, grade and exception type. Visible to every permitted role; editable only by credit risk here (the tenant administrator edits it in the admin console)."
+        actions={<VersionBadge status="Published" version={s.cfg.matrixVersion} />}
       />
       <Section flush>
         <StaticTable
-          head={["Level", "Who", "Amount", "Products", "Grades", "Exceptions"]}
-          rows={[
-            ["L1", "Approvers (3)", `Up to ${peso(a.limit ?? 0)}`, "Personal, salary", `${grades[0]}–${grades[grades.length - 1]}`, "Second sign-off on overrides"],
-            ["L2", "Head of credit", "Up to ₱3,000,000", "Personal, salary", "A–D", "Policy exceptions"],
-            ["L3", "Credit committee", "Above ₱3,000,000", "All", "All", "Related-party and insider loans"],
-          ]}
+          head={["Level", "Who", "Amount", "Products", "Grades", "Exceptions", ""]}
+          rows={s.cfg.matrix.map((row) => [
+            <b key="l" className="font-semibold text-strong">{row.level}</b>,
+            row.who,
+            row.amount,
+            row.products,
+            row.grades,
+            row.exceptions,
+            can ? <CfgButton key="e" readOnly={ro} size="sm" onClick={() => openEdit(row)}>Edit</CfgButton> : null,
+          ])}
         />
       </Section>
       <Section title="Override threshold" className="mt-3.5">
         <CheckRow label={`Recommendation changes the decision, or differs from the AI amount by ${peso(OVERRIDE_THRESHOLD)} or more`} value="Second sign-off required" />
         <CheckRow label="Smaller differences" value="Reason code recorded" />
       </Section>
+      <ConfirmDialog
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+        title={`Edit authority level ${editing?.level ?? ""}`}
+        description="Takes effect for cases not yet routed; a case already sitting with an approver keeps the limit that applied when it was routed to them."
+        okLabel="Save and publish"
+        onConfirm={async () => {
+          if (!editing) return
+          const r = await run(updateMatrixLevel(editing.level, fields))
+          if (!r.ok) return r.error
+        }}
+      >
+        <div className="mb-3 grid gap-[5px]">
+          <Label htmlFor="mx-amt">Amount limit</Label>
+          <Input id="mx-amt" value={fields.amount} onChange={(e) => setFields({ ...fields, amount: e.target.value })} />
+        </div>
+        <div className="mb-3 grid gap-[5px]">
+          <Label htmlFor="mx-grd">Grades</Label>
+          <Input id="mx-grd" value={fields.grades} onChange={(e) => setFields({ ...fields, grades: e.target.value })} />
+        </div>
+        <div className="mb-3 grid gap-[5px]">
+          <Label htmlFor="mx-exc">Exceptions</Label>
+          <Input id="mx-exc" value={fields.exceptions} onChange={(e) => setFields({ ...fields, exceptions: e.target.value })} />
+        </div>
+      </ConfirmDialog>
     </>
   )
 }

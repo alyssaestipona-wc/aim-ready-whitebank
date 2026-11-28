@@ -27,7 +27,7 @@ import { NotificationBell } from "./notification-bell"
 import { StaffStrip } from "./staff-strip"
 import { useConsole } from "./use-console"
 
-const DETAIL_PARENT: Record<string, RouteKey> = { case: "apps", product: "products" }
+const DETAIL_PARENT: Record<string, RouteKey> = { case: "apps", product: "products", template: "templates" }
 
 const WIDE = "(min-width: 900px)"
 function subscribeWide(cb: () => void) {
@@ -98,7 +98,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
       <>
         <span>{route.group}</span>
         <span className="text-g-300">/</span>
-        <Link href={route.key === "case" ? "/applications" : "/config/products"} className="text-muted-foreground no-underline">
+        <Link href={route.key === "case" ? "/applications" : pathOf(DETAIL_PARENT[route.key] ?? "products")} className="text-muted-foreground no-underline">
           {route.label}
         </Link>
         <span className="text-g-300">/</span>

@@ -9,17 +9,17 @@
 import type { AutomationMode, CustomCondition, PolicyRule } from "@aim-ready/core"
 
 import { TODAY } from "../constants"
-import { log, me, peso, products } from "../engine"
-import { getSessionRole, setFlagsCookie } from "../session"
-import { getState, update } from "../store"
+import { isAdmin, isClosed, log, me, peso, products } from "../engine"
+import { getSessionRole } from "../session"
+import { update } from "../store"
 import type { ProductCode, StaffState, TriggerKey } from "../types"
 import { fail, ok, type ActionResult } from "./result"
 
 const role = () => getSessionRole()
 
-/** Credit risk and the tenant administrator configure; everyone else only views. */
+/** Credit risk configures; everyone else only views. */
 export function canConfigure(r = role()): boolean {
-  return r === "risk" || r === "admin"
+  return r === "risk"
 }
 
 const nextVersion = (v: string) => `v${Number(v.slice(1)) + 1}`
@@ -27,7 +27,7 @@ const nextVersion = (v: string) => `v${Number(v.slice(1)) + 1}`
 /* ---------------- regulatory extracts (CIC) ---------------- */
 
 export async function generateCic(): Promise<ActionResult> {
-  if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
+  if (role() !== "risk") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
     if (s.cic[0]?.[4].startsWith("Submitted")) return fail("The Nov 2026 file was already submitted.", true)
     s.cic = [["CIC_KALINAW_202611.txt", "Nov 2026", "218,400", 2, "Ready", s.tenantId]]
@@ -37,7 +37,7 @@ export async function generateCic(): Promise<ActionResult> {
 }
 
 export async function fixCic(): Promise<ActionResult> {
-  if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
+  if (role() !== "risk") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
     const f = s.cic[0]
     if (!f) return fail("No file to fix.", true)
@@ -48,7 +48,7 @@ export async function fixCic(): Promise<ActionResult> {
 }
 
 export async function submitCic(): Promise<ActionResult> {
-  if (role() !== "risk" && role() !== "admin") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
+  if (role() !== "risk") return fail(role() === "compliance" ? "Read-only access" : "Your role can’t do this.", true)
   return update((s) => {
     const f = s.cic[0]
     if (!f) return fail("No file to submit.", true)
@@ -121,22 +121,7 @@ export async function submitProductDraft(): Promise<ActionResult> {
     D.inReview = true
     D.author = me(role()).name
     log(s, role(), null, `Submitted ${P.name} draft: max ${peso(D.max)}, auto-approval limit ${peso(D.autoLimit)}`)
-    return ok(`Submitted. ${role() === "risk" ? "Jonas Mercado" : "Rafael Cruz"} can approve it.`)
-  })
-}
-
-export async function publishProductDraft(): Promise<ActionResult> {
-  if (!canConfigure()) return fail("Read-only access", true)
-  return update((s) => {
-    const D = s.pdraft
-    if (!D || !D.inReview) return fail("Nothing to publish.", true)
-    if (D.author === me(role()).name) return fail("A different person must approve this change", true)
-    const P = products(s)[D.code]
-    const v = nextVersion(P.version)
-    s.prodOverrides[D.code] = { max: D.max, autoLimit: D.autoLimit, version: v }
-    s.pdraft = null
-    log(s, role(), null, `Approved and published ${P.name} ${v} (maker-checker; drafted by ${D.author})`)
-    return ok(`${P.name} ${v} is live for new applications`)
+    return ok("Submitted. The tenant administrator can approve it in the admin console.")
   })
 }
 
@@ -230,37 +215,11 @@ export async function submitRuleDraft(): Promise<ActionResult> {
     s.cfg.ruleset.inReview = true
     s.cfg.ruleset.author = me(role()).name
     log(s, role(), null, "Submitted draft rule set for review")
-    return ok(`Submitted. ${role() === "risk" ? "Jonas Mercado" : "Rafael Cruz"} can approve it.`)
+    return ok("Submitted. The tenant administrator can approve it in the admin console.")
   })
 }
 
-/** Guard before the publish confirmation: the author may not publish. */
-export async function canPublishRuleSet(): Promise<ActionResult> {
-  if (!canConfigure()) return fail("Read-only access", true)
-  const s = getState()
-  if (s.cfg.ruleset.author === me(role()).name) return fail("You submitted this change; a different person must approve it", true)
-  return ok()
-}
-
-export async function publishRuleSet(): Promise<ActionResult> {
-  const guard = await canPublishRuleSet()
-  if (!guard.ok) return guard
-  return update((s) => {
-    const D = s.cfg.draft
-    if (!D || !s.cfg.ruleset.inReview) return fail("Nothing to publish.", true)
-    const v = nextVersion(s.cfg.ruleset.pub)
-    const author = s.cfg.ruleset.author
-    s.cfg.rules = D.rules
-    s.cfg.bands = D.bands
-    if (D.triggers) s.cfg.triggers = D.triggers
-    s.cfg.draft = null
-    s.cfg.ruleset = { pub: v, inReview: false, author: null }
-    log(s, role(), null, `Approved and published rule set ${v} (maker-checker; drafted by ${author})`)
-    return ok(`Rule set ${v} is live`)
-  })
-}
-
-/* ---------------- automation, kill switch, modules, drills ---------------- */
+/* ---------------- automation, kill switch ---------------- */
 
 export async function setAutomation(code: ProductCode, mode: AutomationMode): Promise<ActionResult> {
   if (role() !== "risk") return fail("Credit risk only", true)
@@ -282,32 +241,71 @@ export async function setKillSwitch(on: boolean): Promise<ActionResult> {
   })
 }
 
-/** Module flag (PRD PLT-2): tenant administrator only; mirrored to the route-check cookie. */
-export async function setAiModule(on: boolean): Promise<ActionResult> {
-  if (role() !== "admin") return fail("Tenant administrator only", true)
-  const r = update((s) => {
-    s.flags.ai = on
-    log(s, role(), null, `Turned ${on ? "on" : "off"} module: AI credit scoring`)
-    return ok(`Module ${on ? "on" : "off"}`, on ? "ok" : "warn")
+/* ---------------- approval matrix (direct edit, no maker-checker — PC-4) ---------------- */
+
+export type MatrixLevelInput = { amount: string; grades: string; exceptions: string }
+
+/**
+ * Edits one authority level and publishes immediately: PC-4's acceptance
+ * criteria never ask for a draft/submit/review step, unlike products or the
+ * rule set. Available to the same roles as `canConfigure` (credit risk, and
+ * the administrator while that role still exists in this app).
+ */
+export async function updateMatrixLevel(level: string, input: MatrixLevelInput): Promise<ActionResult> {
+  if (!canConfigure()) return fail("Read-only access", true)
+  const amount = input.amount.trim()
+  const grades = input.grades.trim()
+  if (!amount) return fail("Amount limit is required.")
+  if (!grades) return fail("Grades is required.")
+  return update((s) => {
+    const row = s.cfg.matrix.find((r) => r.level === level)
+    if (!row) return fail("That authority level no longer exists.", true)
+    row.amount = amount
+    row.grades = grades
+    row.exceptions = input.exceptions.trim()
+    s.cfg.matrixVersion = nextVersion(s.cfg.matrixVersion)
+    log(s, role(), null, `Published approval matrix ${s.cfg.matrixVersion}: level ${level} now ${row.amount}, grades ${row.grades}`)
+    return ok(`Approval matrix ${s.cfg.matrixVersion} is live`)
   })
-  setFlagsCookie(getState().flags)
-  return r
 }
 
-export async function toggleBureauDrill(): Promise<ActionResult> {
-  if (role() !== "admin") return fail("Tenant administrator only", true)
+/* ---------------- documents and templates (direct edit, no maker-checker — PC-5) ---------------- */
+
+export type TemplateFields = { usedFor: string; retention: string; body: string }
+
+/** Tenant administrator only — credit risk and compliance see the same detail page read-only. */
+export function canConfigureTemplates(r = role()): boolean {
+  return isAdmin(r)
+}
+
+export async function saveTemplate(id: string, fields: TemplateFields): Promise<ActionResult> {
+  if (!canConfigureTemplates()) return fail("Tenant administrator only", true)
+  const usedFor = fields.usedFor.trim()
+  const retention = fields.retention.trim()
+  const body = fields.body.trim()
+  if (!usedFor || !retention || !body) return fail("Every field is required.")
   return update((s) => {
-    s.cfg.bureauDown = !s.cfg.bureauDown
-    log(s, role(), null, s.cfg.bureauDown ? "Failure drill: credit bureau outage simulated" : "Credit bureau restored")
-    return s.cfg.bureauDown ? ok("Bureau outage simulated. New applications will go to manual review.", "warn") : ok("Bureau restored")
+    const t = s.cfg.templates.find((x) => x.id === id)
+    if (!t) return fail("That template no longer exists.", true)
+    t.usedFor = usedFor
+    t.retention = retention
+    t.body = body
+    t.version = nextVersion(t.version)
+    log(s, role(), null, `Published ${t.name} ${t.version}`)
+    return ok(`${t.name} ${t.version} is live`)
   })
 }
 
-export async function toggleCoreDrill(): Promise<ActionResult> {
-  if (role() !== "admin") return fail("Tenant administrator only", true)
+/** Refused while any not-yet-closed case's documents still carry this template's name. */
+export async function deleteTemplate(id: string): Promise<ActionResult> {
+  if (!canConfigureTemplates()) return fail("Tenant administrator only", true)
   return update((s) => {
-    s.cfg.coreFailNext = !s.cfg.coreFailNext
-    log(s, role(), null, s.cfg.coreFailNext ? "Failure drill: next core booking will time out" : "Core booking drill cancelled")
-    return s.cfg.coreFailNext ? ok("The next booking a checker approves will time out in core", "warn") : ok("Drill cancelled")
+    const t = s.cfg.templates.find((x) => x.id === id)
+    if (!t) return fail("That template no longer exists.", true)
+    const inUse = s.apps.some((a) => !isClosed(a) && a.docs.some(([name]) => name === t.name))
+    if (inUse) return fail(`Can’t delete ${t.name}: still referenced by an open loan’s documents.`, true)
+    s.cfg.templates = s.cfg.templates.filter((x) => x.id !== id)
+    log(s, role(), null, `Deleted template ${t.name}`)
+    return ok(`${t.name} deleted`)
   })
 }

@@ -39,4 +39,8 @@ describe('ApplicationsController roles', () => {
     expect(rolesOf(proto.create)).toBeUndefined();
     expect(rolesOf(proto.close)).toBeUndefined();
   });
+
+  it('restricts decide to the approver role only, not every staff role', () => {
+    expect(rolesOf(proto.decide)).toEqual(['approver']);
+  });
 });

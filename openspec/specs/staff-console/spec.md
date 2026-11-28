@@ -159,7 +159,25 @@ The console SHALL offer an Applications screen reading real application data fro
 #### Scenario: Staff opens a real application's detail
 - **GIVEN** a real application in the staff user's tenant
 - **WHEN** they open its detail view
-- **THEN** they see its decision summary (score, grade, rule results, reasons, rule-set and model versions) and its three consent records, with no decisioning action available on this screen
+- **THEN** they see its decision summary (score, grade, rule results, reasons, rule-set and model versions) and its three consent records
+
+### Requirement: Real application detail offers approve/decline to the approver
+The real application detail screen SHALL offer Approve and Decline actions to a signed-in approver, visible only while the application is in the `Review` stage. Declining SHALL require choosing a reason code from the fixed seeded list before it can be sent.
+
+#### Scenario: Approver sees the actions on a referred application
+- **GIVEN** an approver viewing a real application in the `Review` stage
+- **WHEN** the detail screen renders
+- **THEN** Approve and Decline actions are shown
+
+#### Scenario: Actions are hidden once decided
+- **GIVEN** a real application already in `Offer` or `Declined`
+- **WHEN** an approver views its detail
+- **THEN** neither action is shown
+
+#### Scenario: A non-approver does not see the actions
+- **GIVEN** a staff user who is not an approver, viewing a real application in `Review`
+- **WHEN** the detail screen renders
+- **THEN** neither action is shown
 
 ### Requirement: Officer review actions
 In Review, the owning loan officer SHALL be able to:

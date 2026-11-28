@@ -1,6 +1,10 @@
 import {
+  decideApplicationRequestSchema,
+  decideApplicationResponseSchema,
   staffApplicationDetailSchema,
   staffApplicationListResponseSchema,
+  type DecideApplicationRequest,
+  type DecideApplicationResponse,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from "@aim-ready/contracts"
@@ -62,5 +66,35 @@ export async function getApplication(id: string): Promise<Result<StaffApplicatio
   }
   const parsed = staffApplicationDetailSchema.safeParse(body)
   if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  return { ok: true, data: parsed.data }
+}
+
+export async function decideApplication(
+  id: string,
+  dto: DecideApplicationRequest,
+): Promise<Result<DecideApplicationResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+  const requestParsed = decideApplicationRequestSchema.safeParse(dto)
+  if (!requestParsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  const request = requestParsed.data
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/decide`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(request),
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = decideApplicationResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  // A business refusal (e.g. above authority, bad reason code) isn't a
+  // fetch/schema failure - surface its own message, not the generic one.
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
   return { ok: true, data: parsed.data }
 }

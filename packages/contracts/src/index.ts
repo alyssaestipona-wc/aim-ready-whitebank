@@ -173,3 +173,24 @@ export const staffApplicationDetailSchema = z.object({
   })),
 })
 export type StaffApplicationDetail = z.infer<typeof staffApplicationDetailSchema>
+
+export const decideApplicationRequestSchema = z.object({
+  decision: z.enum(["approve", "decline"]),
+  reasonCode: z.string().min(1).optional(),
+})
+export type DecideApplicationRequest = z.infer<typeof decideApplicationRequestSchema>
+
+export const decideApplicationSuccessSchema = z.union([
+  z.object({ ok: z.literal(true), stage: z.literal("Offer"), monthlyPayment: z.number().int() }),
+  z.object({ ok: z.literal(true), stage: z.literal("Declined") }),
+])
+export type DecideApplicationSuccess = z.infer<typeof decideApplicationSuccessSchema>
+
+export const decideApplicationErrorSchema = z.object({
+  ok: z.literal(false),
+  error: z.string().min(1),
+})
+export type DecideApplicationError = z.infer<typeof decideApplicationErrorSchema>
+
+export const decideApplicationResponseSchema = z.union([decideApplicationSuccessSchema, decideApplicationErrorSchema])
+export type DecideApplicationResponse = DecideApplicationSuccess | DecideApplicationError

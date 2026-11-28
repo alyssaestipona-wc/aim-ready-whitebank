@@ -1,12 +1,14 @@
 "use client"
 
-import { Badge, Card, PageHeader } from "@aim-ready/ui"
+import { Badge, Button, Card, NativeSelect, NativeSelectOption, PageHeader, useToast } from "@aim-ready/ui"
 import { formatPeso } from "@aim-ready/core"
 import type { StaffApplicationDetail } from "@aim-ready/contracts"
 import { useParams } from "next/navigation"
 import * as React from "react"
 
-import { getApplication } from "@/mock/actions/applications"
+import { useSessionRole } from "@/mock"
+import { DECLINE_CODES } from "@/mock/constants"
+import { decideApplication, getApplication } from "@/mock/actions/applications"
 
 type Decision = {
   score: number | null
@@ -21,14 +23,29 @@ type Decision = {
 }
 
 /**
- * Real application detail from apps/api - decision summary and consents,
- * read-only (staff-application-review's own non-goal: no decisioning
- * action here yet).
+ * Real application detail from apps/api - decision summary, consents, and
+ * (for an approver, while the application is in Review) an Approve/Decline
+ * action - staff-decisioning-actions' own addition to staff-application-
+ * review's originally read-only screen.
  */
 export default function LiveApplicationDetailPage() {
   const params = useParams<{ id: string }>()
+  const role = useSessionRole()
+  const toast = useToast()
   const [data, setData] = React.useState<StaffApplicationDetail | null>(null)
   const [error, setError] = React.useState<string | null>(null)
+  const [reasonCode, setReasonCode] = React.useState("")
+  const [submitting, setSubmitting] = React.useState(false)
+
+  const load = React.useCallback(async () => {
+    const res = await getApplication(params.id)
+    if (res.ok) {
+      setData(res.data)
+      setError(null)
+    } else {
+      setError(res.error)
+    }
+  }, [params.id])
 
   React.useEffect(() => {
     let cancelled = false
@@ -42,10 +59,38 @@ export default function LiveApplicationDetailPage() {
     }
   }, [params.id])
 
+  async function decide(decision: "approve" | "decline") {
+    if (decision === "decline" && !reasonCode) {
+      toast("Choose a reason before declining.", "bad")
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await decideApplication(params.id, { decision, reasonCode: reasonCode || undefined })
+      if (!res.ok) {
+        toast(res.error, "bad")
+        return
+      }
+      setReasonCode("")
+      if (res.data.ok && res.data.stage === "Offer") {
+        toast(`Approved — monthly repayment ${formatPeso(res.data.monthlyPayment)}.`)
+      } else {
+        toast("Application declined.")
+      }
+      // Keep the actions disabled (`submitting`) until this reload lands,
+      // so the stage-gated Approve/Decline controls can't be clicked again
+      // on stale data before they know the application was already decided.
+      await load()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (error) return <p role="alert">{error}</p>
   if (!data) return <p>Loading…</p>
 
   const decision = data.decision as Decision
+  const canDecide = role === "approver" && data.stage === "Review"
 
   return (
     <>
@@ -53,6 +98,26 @@ export default function LiveApplicationDetailPage() {
         eyebrow={data.productCode}
         title={`Application ${data.id}`}
         description={`${formatPeso(data.amount)} over ${data.tenor} months — ${data.purpose}`}
+        actions={
+          canDecide ? (
+            <>
+              <NativeSelect aria-label="Decline reason" value={reasonCode} onChange={(e) => setReasonCode(e.target.value)}>
+                <NativeSelectOption value="">Decline reason…</NativeSelectOption>
+                {DECLINE_CODES.map((c) => (
+                  <NativeSelectOption key={c} value={c}>
+                    {c}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+              <Button variant="ghost" disabled={submitting} onClick={() => decide("decline")}>
+                Decline
+              </Button>
+              <Button disabled={submitting} onClick={() => decide("approve")}>
+                Approve
+              </Button>
+            </>
+          ) : undefined
+        }
       />
       <Card>
         <h2>Decision summary</h2>

@@ -213,19 +213,21 @@ describe("apply", () => {
     await userEvent.click(screen.getByRole("button", { name: "Submit application" }))
     expect(await screen.findByRole("alert")).toHaveTextContent("Please tick the credit check consent, data processing consent, terms and conditions to submit.")
     for (const box of screen.getAllByRole("checkbox")) await userEvent.click(box)
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-    try {
-      await userEvent.click(screen.getByRole("button", { name: "Submit application" }))
-      expect(await screen.findByText("Just a moment…")).toBeInTheDocument()
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(1300)
-      })
-    } finally {
-      vi.useRealTimers()
-    }
+    await userEvent.click(screen.getByRole("button", { name: "Submit application" }))
     expect(await screen.findByText("Application sent")).toBeInTheDocument()
     expect(screen.getByText("You’re approved for ₱150,000")).toBeInTheDocument()
     expect(screen.getByText(/Reference APP-4301/)).toBeInTheDocument()
+  })
+
+  it("shows a distinct error, not a generic one, when the application service is unreachable", async () => {
+    await signInAs("juan")
+    renderPage(<ApplyPage />, "/apply")
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }))
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }))
+    for (const box of screen.getAllByRole("checkbox")) await userEvent.click(box)
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("network error"))
+    await userEvent.click(screen.getByRole("button", { name: "Submit application" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't submit your application right now. Try again shortly.")
   })
 
   it("blocks a duplicate open application", async () => {

@@ -5,9 +5,39 @@ import type { AppScope, Role } from '@aim-ready/contracts';
 
 import { AppDataSource } from './data-source';
 import { UserEntity } from '../users/user.entity';
+import { BorrowerProfileEntity } from '../applications/borrower-profile.entity';
 
 const TENANT_ID = 'kalinaw';
 const DEMO_PASSWORD = 'kalinaw2026';
+
+/**
+ * Decision-pipeline inputs for each seeded borrower, lifted verbatim from
+ * `apps/web/src/mock/config.ts`'s `BORROWERS` fixture (age, bureau file,
+ * years as customer, stable-income flag) - the same "lift, don't invent"
+ * rule `SEED_ACCOUNTS` below already follows.
+ */
+const BORROWER_PROFILES: Record<
+  string,
+  {
+    age: number;
+    bureau: 'Full file' | 'Thin file' | 'No file';
+    yearsAsCustomer: number;
+    stable: boolean;
+  }
+> = {
+  'juan.delacruz@email.com': {
+    age: 36,
+    bureau: 'Full file',
+    yearsAsCustomer: 7,
+    stable: true,
+  },
+  'carmela.bautista@email.com': {
+    age: 41,
+    bureau: 'Full file',
+    yearsAsCustomer: 5,
+    stable: false,
+  },
+};
 
 /**
  * One row per account this build's three frontend apps already simulate.
@@ -87,20 +117,41 @@ export async function seed(dataSource = AppDataSource): Promise<void> {
   if (owns) await dataSource.initialize();
   try {
     const repo = dataSource.getRepository(UserEntity);
+    const profileRepo = dataSource.getRepository(BorrowerProfileEntity);
     const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
     for (const account of SEED_ACCOUNTS) {
-      const existing = await repo.findOne({
+      let user = await repo.findOne({
         where: { tenantId: TENANT_ID, email: account.email },
       });
-      if (existing) continue;
-      await repo.save(
-        repo.create({
+      if (!user) {
+        user = await repo.save(
+          repo.create({
+            tenantId: TENANT_ID,
+            email: account.email,
+            passwordHash,
+            appScope: account.appScope,
+            role: account.role,
+            name: account.name,
+          }),
+        );
+      }
+
+      const profile = BORROWER_PROFILES[account.email];
+      if (!profile) continue;
+      const existingProfile = await profileRepo.findOne({
+        where: { userId: user.id },
+      });
+      if (existingProfile) continue;
+      await profileRepo.save(
+        profileRepo.create({
+          userId: user.id,
           tenantId: TENANT_ID,
-          email: account.email,
-          passwordHash,
-          appScope: account.appScope,
-          role: account.role,
-          name: account.name,
+          age: profile.age,
+          bureau: profile.bureau,
+          yearsAsCustomer: profile.yearsAsCustomer,
+          stable: profile.stable,
+          sanctions: false,
+          defaulted: false,
         }),
       );
     }

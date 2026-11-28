@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { simulateDecision, type DecisionInput, type DecisionPolicy } from "../decision";
-import { toCentavos } from "../money";
+import { simulateDecision, toCentavos, type DecisionInput, type DecisionPolicy } from "../index";
 
 // Seeded tenant configuration from the prototype's baseCfg(); tests pass it in
 // explicitly because core never defaults policy.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPeso, fromCentavos, toCentavos } from "../money";
+import { formatPeso, fromCentavos, toCentavos } from "../index";
 
 describe("toCentavos", () => {
   it("converts whole and fractional pesos", () => {

@@ -10,7 +10,7 @@ import { form } from "@/test/utils"
 function harness(storage = memoryStorage()) {
   let t = 1_000_000
   const store = createStore(storage)
-  const actions = createActions(store, { now: () => t, wait: async () => {} })
+  const actions = createActions(store, { now: () => t })
   return { store, actions, storage, tick: (ms: number) => (t += ms), now: () => t }
 }
 

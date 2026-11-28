@@ -2,7 +2,6 @@ import { act, render } from "@testing-library/react"
 import { toCentavos } from "@aim-ready/core"
 import { ToastProvider } from "@aim-ready/ui"
 import * as React from "react"
-import { vi } from "vitest"
 
 import { PortalShell } from "@/components/shell"
 import { actions, store } from "@/mock"
@@ -46,20 +45,13 @@ export function form(over: Partial<ApplicationForm> = {}): ApplicationForm {
   }
 }
 
-/** Submits, fast-forwarding the 1.2 s simulated checks. */
+/** Submits an application (the real `/applications` call is mocked instant in tests). */
 export async function submitInstant(f: ApplicationForm) {
-  vi.useFakeTimers({ shouldAdvanceTime: true })
-  try {
-    let r: Awaited<ReturnType<typeof actions.submitApplication>> | undefined
-    await act(async () => {
-      const p = actions.submitApplication(f)
-      await vi.advanceTimersByTimeAsync(1300)
-      r = await p
-    })
-    return r!
-  } finally {
-    vi.useRealTimers()
-  }
+  let r: Awaited<ReturnType<typeof actions.submitApplication>> | undefined
+  await act(async () => {
+    r = await actions.submitApplication(f)
+  })
+  return r!
 }
 
 /** Moves every waiting application past its simulated bank step. */

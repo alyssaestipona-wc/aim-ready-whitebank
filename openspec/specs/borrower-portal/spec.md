@@ -70,12 +70,12 @@ Without an open application, Home SHALL offer "Apply for a loan".
 - **THEN** Home shows "We need a few more documents" and an "Upload documents" button
 
 ### Requirement: Three-step loan application
-The apply page SHALL collect the following in three steps, then submit:
+The apply page SHALL collect the following in three steps, then submit to the real `application-intake` endpoint (`apps/api`):
 1. product, amount and term, with a live estimated monthly payment;
 2. monthly income, other monthly loan payments and purpose;
 3. a review and three consents.
 
-Money fields SHALL format with thousands separators and two decimals. Back and Continue SHALL be equal width.
+Money fields SHALL format with thousands separators and two decimals. Back and Continue SHALL be equal width. Client-side checks are UX only; the API is the validation authority.
 
 #### Scenario: Amount out of range
 - **GIVEN** step 1 of the application for a personal loan
@@ -90,17 +90,22 @@ Money fields SHALL format with thousands separators and two decimals. Back and C
 #### Scenario: Duplicate open application
 - **GIVEN** an open application for the same product
 - **WHEN** a new one is submitted
-- **THEN** a red inline error names the open application, and no new one is created
+- **THEN** the API rejects it, naming the existing application, and the portal shows that error with no new application created
 
 #### Scenario: Submission runs checks
 - **GIVEN** Juan, signed in with no open application, on step 3 with all consents ticked
 - **WHEN** a ₱150,000 / 24-month personal loan is submitted
-- **THEN** a "Just a moment…" loading state shows, then "Application sent" shows "You’re approved for ₱150,000". The decision's inputs, rule-set version, model version and outcome are recorded on the application.
+- **THEN** a "Just a moment…" loading state shows, then "Application sent" shows "You're approved for ₱150,000". The application and its decision record (inputs, rule-set version, model version, outcome) are computed and persisted by `apps/api`, not the browser.
 
 #### Scenario: Decision record is immutable
-- **GIVEN** a submitted application with its decision record
+- **GIVEN** a submitted application with its decision record, persisted by `apps/api`
 - **WHEN** later steps change its stage (offer accepted, documents signed, funds released)
 - **THEN** the stored decision inputs, versions and outcome are unchanged
+
+#### Scenario: Application service unavailable
+- **GIVEN** step 3 of the application with all consents ticked
+- **WHEN** submit is selected while the application service is unreachable
+- **THEN** a distinct "We couldn't submit your application right now. Try again shortly." error is shown, and nothing is submitted
 
 ### Requirement: Simulated bank progression
 Because the portal has no shared back office in this phase, its mock layer SHALL stand in for bank staff. About 4 seconds after a stage that waits on the bank, it SHALL advance the application to the next borrower-visible stage:

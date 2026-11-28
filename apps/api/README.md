@@ -25,11 +25,41 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+This app also hosts WhiteBank Lending's real identity service (`src/auth`,
+OpenSpec change `real-identity-service`): login, two-step staff/admin
+verification, signed session tokens, and server-side role enforcement for
+all three frontend apps.
+
 ## Project setup
 
 ```bash
 $ pnpm install
 ```
+
+### Local database
+
+A local PostgreSQL server must be running. This app expects a dedicated
+role and two databases, created once:
+
+```bash
+psql -d postgres -c "CREATE ROLE aimready WITH LOGIN PASSWORD 'aimready_dev';"
+psql -d postgres -c "CREATE DATABASE aimready OWNER aimready;"
+psql -d postgres -c "CREATE DATABASE aimready_test OWNER aimready;"
+```
+
+Every env var (`DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`,
+`AUTH_JWT_SECRET`) has a safe local default matching the above, so no `.env`
+file is required to run this locally. Then, once per database:
+
+```bash
+pnpm run migration:run                  # against aimready
+DB_NAME=aimready_test pnpm run migration:run
+pnpm run seed                           # seeds aimready from each app's demo roster
+```
+
+`pnpm run test` runs its TypeORM-touching tests against `aimready_test`
+(pass `DB_NAME=aimready_test`), per AGENTS.md's testing rule: no mocked
+repository for those.
 
 ## Compile and run the project
 

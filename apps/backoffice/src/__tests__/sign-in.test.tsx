@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import SignInPage from "@/app/sign-in/page"
 import { getSessionRole, getState, USERS, type RoleKey } from "@/mock"
@@ -74,5 +74,23 @@ describe("staff sign-in", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Tenant administrators sign in at the separate admin console.")
     expect(screen.queryByLabelText("Authentication code")).not.toBeInTheDocument()
     expect(getSessionRole()).toBeNull()
+  })
+
+  it("shows a distinct error, not the generic one, when the identity service is unreachable at the password step", async () => {
+    setup(null, "/sign-in")
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("network error"))
+    render(<SignInPage />)
+    await credentials("approver@kalinawbank.ph", "kalinaw2026")
+    expect(screen.getByRole("alert")).toHaveTextContent("We can't sign you in right now. Try again shortly.")
+  })
+
+  it("shows a distinct error, not the generic one, when the identity service is unreachable at the code step", async () => {
+    setup(null, "/sign-in")
+    render(<SignInPage />)
+    await credentials("approver@kalinawbank.ph", "kalinaw2026")
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("network error"))
+    await userEvent.type(screen.getByLabelText("Authentication code"), "123456")
+    await userEvent.click(screen.getByRole("button", { name: "Verify and sign in" }))
+    expect(screen.getByRole("alert")).toHaveTextContent("We can't sign you in right now. Try again shortly.")
   })
 })

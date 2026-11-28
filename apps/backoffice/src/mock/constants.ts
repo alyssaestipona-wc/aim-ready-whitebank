@@ -15,6 +15,9 @@ export const BANK_NAME = "Kalinaw"
 /** Shared demo password for every seeded staff account (sample data only). */
 export const DEMO_PASSWORD = "kalinaw2026"
 
+/** The real identity service (apps/api); client-side, so this must be a public env var. */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000"
+
 /** The prototype's fixed "today". */
 export const TODAY = "27 Nov"
 

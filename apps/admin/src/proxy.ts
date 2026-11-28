@@ -1,18 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { allowed, flagsFromCookie, FLAGS_COOKIE, isSessionRole, LANDING, matchRoute, pathOf, SESSION_COOKIE } from "./lib/access"
+import { allowed, flagsFromCookie, FLAGS_COOKIE, LANDING, matchRoute, pathOf, SESSION_COOKIE } from "./lib/access"
+import { verifySessionToken } from "./lib/session-token"
 
 /**
  * Server-side route check, run before any page renders.
  *
- * PLACEHOLDER SESSION: the role comes from an unsigned cookie set by the mock
- * sign-in. This keeps access control on the server, as AGENTS.md requires,
- * but it is not authentication. Replace with the `apps/api` session.
+ * The cookie carries a real session token issued by apps/api's identity
+ * service and signed with HMAC-SHA256; it is verified here, not just
+ * checked for presence (real-identity-service).
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const raw = request.cookies.get(SESSION_COOKIE)?.value
-  const signedIn = isSessionRole(raw)
+  const token = request.cookies.get(SESSION_COOKIE)?.value
+  const signedIn = !!token && !!verifySessionToken(token)
 
   if (pathname === "/sign-in") {
     return signedIn ? NextResponse.redirect(new URL(pathOf(LANDING.admin), request.url)) : NextResponse.next()

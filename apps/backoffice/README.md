@@ -4,18 +4,22 @@ The WhiteBank Lending staff console for Kalinaw Bank: sign-in, work queues,
 case review, approvals, maker-checker booking, reports, compliance views and
 tenant configuration.
 
-**This app runs entirely on simulated data.** There are no API calls. All
-cases, decisions and configuration come from the mock module in `src/mock`
-and are kept in the browser's localStorage. "Reset demo data" at the bottom of
-the sidebar restores the seed. The app is a port of the clickable prototype,
-recorded in OpenSpec change `port-lending-prototype` and ADR-0003.
+**Case, decision and configuration data runs entirely on simulated data.**
+All of that comes from the mock module in `src/mock` and is kept in the
+browser's localStorage. "Reset demo data" at the bottom of the sidebar
+restores the seed. The app is a port of the clickable prototype, recorded in
+OpenSpec change `port-lending-prototype` and ADR-0003. **Sign-in is real**,
+per OpenSpec change `real-identity-service`: it calls `apps/api`'s identity
+service over HTTP.
 
 ## Things to know
 
-- **Placeholder session.** Signing in sets an unsigned `wbl_staff_session`
-  cookie holding the role. `src/proxy.ts` checks it on the server against the
-  route map in `src/lib/access.ts`. This keeps route access server-side, but
-  it is **not authentication**. It is replaced when `apps/api` auth lands.
+- **Real session.** Signing in calls `apps/api`'s `/auth/login` and
+  `/auth/verify-code` (the two-step email+password, then authenticator-code
+  flow), which check the seeded account and return a signed session token
+  holding the role. The app stores it in the `wbl_staff_session` cookie;
+  `src/proxy.ts` verifies its signature on the server (not just presence)
+  against the route map in `src/lib/access.ts`.
 - **Disconnected from web.** The two apps have separate mock stores.
   An application a borrower submits in `web` does not appear here.
 - **Simulated maker-checker.** Maker-checker, authority limits and

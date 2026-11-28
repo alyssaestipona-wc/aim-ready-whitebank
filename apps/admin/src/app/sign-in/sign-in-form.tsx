@@ -6,7 +6,7 @@ import * as React from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { checkCredentials, verifyCode, USERS, type RoleKey } from "@/mock"
+import { checkCredentials, verifyCode } from "@/mock"
 import { pathOf, LANDING } from "@/lib/access"
 import { navigateHard } from "@/lib/navigation"
 
@@ -15,7 +15,7 @@ const codeSchema = z.object({ code: z.string() })
 
 /** Two-step admin sign-in: email and password, then the authenticator code. */
 export function SignInForm() {
-  const [step, setStep] = React.useState<{ role: RoleKey; email: string } | null>(null)
+  const [step, setStep] = React.useState<{ pendingToken: string; email: string } | null>(null)
   const [error, setError] = React.useState("")
   const creds = useForm<z.infer<typeof credentialsSchema>>({ resolver: zodResolver(credentialsSchema), defaultValues: { email: "", password: "" } })
   const code = useForm<z.infer<typeof codeSchema>>({ resolver: zodResolver(codeSchema), defaultValues: { code: "" } })
@@ -25,14 +25,14 @@ export function SignInForm() {
     if (!r.ok) return setError(r.error)
     setError("")
     code.reset({ code: "" })
-    setStep({ role: r.role, email: USERS[r.role].email })
+    setStep({ pendingToken: r.pendingToken, email: v.email })
   })
 
   const onCode = code.handleSubmit(async (v) => {
     if (!step) return
-    const r = await verifyCode(step.role, v.code)
+    const r = await verifyCode(step.pendingToken, v.code)
     if (!r.ok) return setError(r.error)
-    navigateHard(pathOf(LANDING[step.role]))
+    navigateHard(pathOf(LANDING[r.role]))
   })
 
   const errorNote = error ? (

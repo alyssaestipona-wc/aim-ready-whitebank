@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@aim-ready/contracts": "workspace:^",
     "@aim-ready/core": "workspace:^",
     "@aim-ready/ui": "workspace:^",
     "@hookform/resolvers": "^5.9.2",

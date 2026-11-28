@@ -74,9 +74,9 @@ describe("sign in", () => {
   it("sets the session cookie", async () => {
     const h = harness()
     await h.actions.signIn(" Juan.DelaCruz@email.com ", "kalinaw2026")
-    expect(document.cookie).toContain("wbl_borrower_session=juan")
+    expect(document.cookie).toMatch(/wbl_borrower_session=\S+/)
     await h.actions.signOut()
-    expect(document.cookie).not.toContain("wbl_borrower_session=juan")
+    expect(document.cookie).not.toMatch(/wbl_borrower_session=\S+/)
   })
 })
 

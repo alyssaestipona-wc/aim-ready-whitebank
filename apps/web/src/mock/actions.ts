@@ -1,6 +1,7 @@
 import { formatPeso, simulateDecision, type Centavos, type DecisionRecord } from "@aim-ready/core"
+import { loginResponseSchema } from "@aim-ready/contracts"
 
-import { BANK_STEP_MS, BORROWERS, DEMO_PASSWORD, POLICY, PRODUCTS, TENANT, TODAY, UPLOAD_LIMIT_MB } from "./config"
+import { API_BASE_URL, BANK_STEP_MS, BORROWERS, POLICY, PRODUCTS, TENANT, TODAY, UPLOAD_LIMIT_MB } from "./config"
 import { currentBorrower, myApp, productName } from "./selectors"
 import type { Store } from "./store"
 import type { Application, BorrowerState, ProductCode, Result } from "./types"
@@ -16,6 +17,7 @@ import type { Application, BorrowerState, ProductCode, Result } from "./types"
 
 export const SESSION_COOKIE = "wbl_borrower_session"
 export const SIMULATED_STEP = "(simulated bank step)"
+const SERVICE_UNAVAILABLE_ERROR = "We can't sign you in right now. Try again shortly."
 
 /** "27 Nov, 10:32": the prototype's logical clock, two minutes per event. */
 function stamp(s: BorrowerState): string {
@@ -32,9 +34,10 @@ function log(s: BorrowerState, a: Application, what: string, who: string) {
 
 function setCookie(value: string | null) {
   if (typeof document === "undefined") return
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""
   document.cookie = value
-    ? `${SESSION_COOKIE}=${encodeURIComponent(value)}; path=/; SameSite=Lax`
-    : `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax`
+    ? `${SESSION_COOKIE}=${encodeURIComponent(value)}; path=/; SameSite=Lax${secure}`
+    : `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax${secure}`
 }
 
 export type ApplicationForm = {
@@ -130,12 +133,30 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
 
     async signIn(email: string, password: string): Promise<Result<{ borrowerId: string }>> {
       const e = String(email || "").trim().toLowerCase()
+      let body: unknown
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: e, password, appScope: "borrower" }),
+        })
+        if (!res.ok) return { ok: false, error: SERVICE_UNAVAILABLE_ERROR }
+        body = await res.json()
+      } catch {
+        return { ok: false, error: SERVICE_UNAVAILABLE_ERROR }
+      }
+      const parsed = loginResponseSchema.safeParse(body)
+      if (!parsed.success) return { ok: false, error: SERVICE_UNAVAILABLE_ERROR }
+      const result = parsed.data
+      if (!result.ok) return { ok: false, error: result.error }
+      // Borrowers get a session in one step (no code-required branch): api-auth spec.
+      if (result.kind !== "session") return { ok: false, error: SERVICE_UNAVAILABLE_ERROR }
       const who = Object.values(BORROWERS).find((b) => b.email === e)
-      if (!who || password !== DEMO_PASSWORD) return { ok: false, error: "Email or password is incorrect." }
+      if (!who) return { ok: false, error: SERVICE_UNAVAILABLE_ERROR }
       store.update((s) => {
         s.session = who.id
       })
-      setCookie(who.id)
+      setCookie(result.token)
       return { ok: true, borrowerId: who.id }
     },
 

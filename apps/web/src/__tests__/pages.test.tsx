@@ -74,6 +74,15 @@ describe("sign-in", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Email or password is incorrect.")
   })
 
+  it("shows a distinct error, not the generic one, when the identity service is unreachable", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("network error"))
+    renderPage(<SignInPage />, "/sign-in")
+    await userEvent.type(screen.getByLabelText("Email"), "juan.delacruz@email.com")
+    await userEvent.type(screen.getByLabelText("Password"), "kalinaw2026")
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("We can't sign you in right now. Try again shortly.")
+  })
+
   it("never shows another borrower's account after switching sessions", async () => {
     await signInAs("juan")
     const juanRender = renderPage(<HomePage />)

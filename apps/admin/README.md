@@ -6,17 +6,21 @@ templates, notifications, decisioning, AI models, integrations, users and
 roles, tenant settings, and the audit log. See ADR-0005 and OpenSpec change
 `split-admin-console`.
 
-**This app runs entirely on simulated data.** There are no API calls. All
-configuration comes from the mock module in `src/mock` and is kept in the
-browser's localStorage, independent of `apps/backoffice`'s own mock store.
-"Reset demo data" at the bottom of the sidebar restores the seed.
+**Configuration data runs entirely on simulated data.** All of that comes
+from the mock module in `src/mock` and is kept in the browser's
+localStorage, independent of `apps/backoffice`'s own mock store. "Reset demo
+data" at the bottom of the sidebar restores the seed. **Sign-in is real**,
+per OpenSpec change `real-identity-service`: it calls `apps/api`'s identity
+service over HTTP.
 
 ## Things to know
 
-- **Placeholder session.** Signing in sets an unsigned `wbl_admin_session`
-  cookie holding the role. `src/proxy.ts` checks it on the server against the
-  route map in `src/lib/access.ts`. This keeps route access server-side, but
-  it is **not authentication**. It is replaced when `apps/api` auth lands.
+- **Real session.** Signing in calls `apps/api`'s `/auth/login` and
+  `/auth/verify-code` (the two-step email+password, then authenticator-code
+  flow), which check the seeded tenant-administrator account and return a
+  signed session token. The app stores it in the `wbl_admin_session`
+  cookie; `src/proxy.ts` verifies its signature on the server (not just
+  presence) against the route map in `src/lib/access.ts`.
 - **Disconnected from the staff console.** This app's mock store is
   independent of `apps/backoffice`'s. A product or rule-set draft credit risk
   submits in the staff console is simulated here as already-seeded,

@@ -4,16 +4,20 @@ The Kalinaw Bank online loans app for borrowers: sign-in, the loan
 application, status tracking, inbox, document upload, offer acceptance,
 e-signing and the loan view.
 
-**This app runs entirely on simulated data.** There are no API calls. All
-applications come from the mock module in `src/mock` and are kept in the
-browser's localStorage. The app is a port of the clickable prototype,
+**Loan application data runs entirely on simulated data.** All applications
+come from the mock module in `src/mock` and are kept in the browser's
+localStorage; the rest of the app is a port of the clickable prototype,
 recorded in OpenSpec change `port-lending-prototype` and ADR-0003.
+**Sign-in is real**, per OpenSpec change `real-identity-service`: it calls
+`apps/api`'s identity service over HTTP.
 
 ## Things to know
 
-- **Placeholder session.** Signing in sets an unsigned
-  `wbl_borrower_session` cookie. `src/proxy.ts` checks it on the server to
-  redirect signed-out requests. This is **not authentication**.
+- **Real session.** Signing in calls `apps/api`'s `/auth/login`, which
+  checks the seeded account and returns a signed session token. The app
+  stores it in the `wbl_borrower_session` cookie; `src/proxy.ts` verifies
+  its signature on the server (not just presence) to redirect signed-out or
+  tampered requests.
 - **Simulated bank steps.** This app has no shared back office, so its mock
   layer stands in for bank staff. About 4 seconds after a stage that waits on
   the bank, it moves the application on:

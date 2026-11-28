@@ -6,12 +6,12 @@ import FunnelPage from "@/app/(console)/reports/funnel/page"
 import DecisioningDashboard from "@/app/(console)/reports/decisioning/page"
 import RegulatoryPage from "@/app/(console)/reports/regulatory/page"
 import TurnaroundPage from "@/app/(console)/reports/sla/page"
-import { allowed } from "@/lib/access"
-import { getState, type RoleKey } from "@/mock"
+import { allowed, type SessionRole } from "@/lib/access"
+import { getState } from "@/mock"
 
 import { renderWithToasts, setup } from "./helpers"
 
-const REPORT_ROLES: RoleKey[] = ["officer", "approver", "risk", "compliance", "admin"]
+const REPORT_ROLES: SessionRole[] = ["officer", "approver", "risk", "compliance"]
 
 function barsAreAccent(container: HTMLElement) {
   const bars = container.querySelectorAll("[data-slot=bar]")
@@ -45,10 +45,10 @@ describe("reports", () => {
     expect(screen.getAllByText("9,100").length).toBeGreaterThan(0)
   })
 
-  it("regulatory is limited to risk, compliance and admin", () => {
+  it("regulatory is limited to risk and compliance", () => {
     expect(allowed("officer", "dash-reg")).toBe(false)
     expect(allowed("approver", "dash-reg")).toBe(false)
-    for (const r of ["risk", "compliance", "admin"] as const) expect(allowed(r, "dash-reg")).toBe(true)
+    for (const r of ["risk", "compliance"] as const) expect(allowed(r, "dash-reg")).toBe(true)
   })
 
   it("CIC: errors block submission; fix and submit are audited", async () => {

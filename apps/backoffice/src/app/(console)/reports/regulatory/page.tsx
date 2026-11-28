@@ -1,8 +1,7 @@
 "use client"
 
-import { Button, Card, ListView, PageHeader, StatusPill, type ListFilterDef } from "@aim-ready/ui"
+import { Button, Card, ListView, PageHeader, StatusPill, type ListFilterDef, CfgButton, useRun } from "@aim-ready/ui"
 
-import { CfgButton, useRun } from "@/components/admin/bits"
 import { useConsole } from "@/components/use-console"
 import { fixCic, generateCic, isReadOnly, submitCic, type CicRow } from "@/mock"
 

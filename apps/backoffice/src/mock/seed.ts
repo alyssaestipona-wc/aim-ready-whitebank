@@ -31,6 +31,19 @@ export function baseCfg(): DecisionConfig {
     killSwitch: false,
     bureauDown: false,
     coreFailNext: false,
+    matrixVersion: "v2",
+    matrix: [
+      { level: "L1", who: "Approvers (3)", amount: "Up to ₱1,000,000", products: "Personal, salary", grades: "A–C", exceptions: "Second sign-off on overrides" },
+      { level: "L2", who: "Head of credit", amount: "Up to ₱3,000,000", products: "Personal, salary", grades: "A–D", exceptions: "Policy exceptions" },
+      { level: "L3", who: "Credit committee", amount: "Above ₱3,000,000", products: "All", grades: "All", exceptions: "Related-party and insider loans" },
+    ],
+    templates: [
+      { id: "agreement", name: "Loan agreement", usedFor: "All products", retention: "Closure + 10 years", version: "v5", body: "This agreement is between {{lender_name}} (the Lender) and {{borrower_name}} (the Borrower). The Lender agrees to lend {{amount}} ({{product_name}}), released to the Borrower’s own Kalinaw account net of a {{fee}} processing fee. Repayment: {{tenor}} equal monthly payments of {{monthly_payment}}, starting one month after release. Late payment: 3% of the amount due for each month it remains unpaid." },
+      { id: "disclosure", name: "Disclosure statement (Truth in Lending)", usedFor: "All products", retention: "Closure + 10 years", version: "v3", body: "Amount financed {{amount_financed}}. Fee {{fee}}. Net proceeds {{net_proceeds}}. Term {{term}}. Monthly amortisation {{monthly}}. Total of payments {{total_payments}}. Finance charge {{finance_charge}}. Effective interest rate {{eir}}." },
+      { id: "note", name: "Promissory note", usedFor: "All products", retention: "Closure + 10 years", version: "v2", body: "For value received, I, {{borrower_name}}, promise to pay {{lender_name}} the sum of {{amount}} in {{tenor}} monthly instalments of {{monthly_payment}}." },
+      { id: "approval", name: "Approval letter", usedFor: "Referred cases", retention: "Closure + 5 years", version: "v2", body: "Congratulations {{borrower_name}}, your {{product_name}} application for {{amount}} has been approved." },
+      { id: "decline", name: "Decline letter", usedFor: "Declined cases", retention: "5 years", version: "v4", body: "Dear {{borrower_name}}, after careful review we’re unable to approve your application at this time. Reason: {{decline_reason}}." },
+    ],
     draft: null,
   }
 }

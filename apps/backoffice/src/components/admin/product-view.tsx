@@ -1,12 +1,11 @@
 "use client"
 
 import { fromCentavos, toCentavos } from "@aim-ready/core"
-import { Card, Label, ListView, MoneyInput, PageHeader, StatusPill, type ListFilterDef } from "@aim-ready/ui"
+import { Card, Label, ListView, MoneyInput, PageHeader, StatusPill, type ListFilterDef, CfgButton, CheckRow, DraftBar, SimulatedCheckNote, StaticTable, TabBar, Track, VersionBadge, useRun } from "@aim-ready/ui"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import * as React from "react"
 
-import { CfgButton, CheckRow, DraftBar, SimulatedCheckNote, StaticTable, TabBar, Track, VersionBadge, useRun } from "@/components/admin/bits"
 import { CoreLabel, GradeBadge, KeyValues, Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
 import {
@@ -14,10 +13,8 @@ import {
   createProductDraft,
   discardProductDraft,
   isReadOnly,
-  me,
   peso,
   products,
-  publishProductDraft,
   setProductDraftField,
   STAGES,
   submitProductDraft,
@@ -43,7 +40,6 @@ export function ProductView({ code: raw }: { code: string }) {
   const D = s.pdraft && s.pdraft.code === code ? s.pdraft : null
   const editing = !!D && !D.inReview && can
   const nv = `v${Number(p.version.slice(1)) + 1}`
-  const mine = D?.author === me(role).name
   const authority = USERS.approver
 
   const campaignFilters: ListFilterDef<string[]>[] = [
@@ -65,9 +61,9 @@ export function ProductView({ code: raw }: { code: string }) {
         <span className="min-w-[200px] flex-1 text-sm text-muted-foreground">
           {D
             ? D.inReview
-              ? `Submitted by ${D.author}. A different person must approve before it goes live.`
+              ? "Submitted for review. The tenant administrator approves and publishes it in the admin console."
               : "Editing a draft on Amounts and pricing. Live applications still use the published version."
-            : "Edits start as a draft that a second person approves. In-flight applications keep the version they started on."}
+            : "Edits start as a draft that the tenant administrator approves and publishes in the admin console. In-flight applications keep the version they started on."}
         </span>
         {!D && (
           <CfgButton
@@ -90,17 +86,6 @@ export function ProductView({ code: raw }: { code: string }) {
               Submit for review
             </CfgButton>
           </>
-        )}
-        {D && D.inReview && (
-          <CfgButton
-            readOnly={ro}
-            variant="primary"
-            disabled={!can || mine}
-            title={mine ? "You submitted this change; a different person must approve it" : undefined}
-            onClick={() => run(publishProductDraft())}
-          >
-            Approve and publish
-          </CfgButton>
         )}
         <SimulatedCheckNote />
       </DraftBar>

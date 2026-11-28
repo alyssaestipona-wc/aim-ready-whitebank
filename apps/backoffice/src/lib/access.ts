@@ -4,7 +4,7 @@
  * in `src/proxy.ts` and the sidebar use exactly the same map.
  */
 
-export type AccessRole = "branch" | "officer" | "approver" | "ops" | "risk" | "compliance" | "admin"
+export type AccessRole = "branch" | "officer" | "approver" | "ops" | "risk" | "compliance"
 export type SessionRole = AccessRole | "opssup"
 
 export type RouteKey =
@@ -19,7 +19,7 @@ export type NavItem = { key: RouteKey; label: string; path: string; roles: Acces
 export type NavGroup = { group: string; items: NavItem[] }
 
 const W: AccessRole[] = ["branch", "officer", "approver", "ops", "compliance"]
-const REP: AccessRole[] = ["officer", "approver", "risk", "compliance", "admin"]
+const REP: AccessRole[] = ["officer", "approver", "risk", "compliance"]
 
 export const NAV: NavGroup[] = [
   {
@@ -53,13 +53,13 @@ export const NAV: NavGroup[] = [
       { key: "dash-funnel", label: "Origination funnel", path: "/reports/funnel", roles: REP },
       { key: "dash-sla", label: "Turnaround and SLA", path: "/reports/sla", roles: REP },
       { key: "dash-decision", label: "Decisioning dashboard", path: "/reports/decisioning", roles: REP },
-      { key: "dash-reg", label: "Regulatory extracts", path: "/reports/regulatory", roles: ["risk", "compliance", "admin"] },
+      { key: "dash-reg", label: "Regulatory extracts", path: "/reports/regulatory", roles: ["risk", "compliance"] },
     ],
   },
   {
     group: "Compliance",
     items: [
-      { key: "audit", label: "Audit log", path: "/compliance/audit", roles: ["compliance", "admin"] },
+      { key: "audit", label: "Audit log", path: "/compliance/audit", roles: ["compliance"] },
       { key: "consent", label: "Consent records", path: "/compliance/consent", roles: ["compliance"] },
       { key: "aml", label: "AML escalations", path: "/compliance/aml", roles: ["compliance"] },
       { key: "related", label: "Related-party lending", path: "/compliance/related", roles: ["compliance"] },
@@ -69,16 +69,16 @@ export const NAV: NavGroup[] = [
   {
     group: "Configuration",
     items: [
-      { key: "products", label: "Products", path: "/config/products", roles: ["risk", "admin", "compliance"] },
-      { key: "workflows", label: "Workflows", path: "/config/workflows", roles: ["admin", "compliance"] },
-      { key: "matrix", label: "Approval matrix", path: "/config/matrix", roles: ["risk", "admin", "compliance"] },
-      { key: "templates", label: "Documents and templates", path: "/config/templates", roles: ["admin", "compliance"] },
-      { key: "notifications", label: "Notifications", path: "/config/notifications", roles: ["admin", "compliance"] },
-      { key: "decisioning", label: "Decisioning", path: "/config/decisioning", roles: ["risk", "admin", "compliance"] },
-      { key: "models", label: "AI models", path: "/config/models", roles: ["risk", "admin", "compliance"] },
-      { key: "integrations", label: "Integrations", path: "/config/integrations", roles: ["admin", "compliance"] },
-      { key: "users", label: "Users and roles", path: "/config/users", roles: ["admin", "compliance"] },
-      { key: "tenant", label: "Tenant settings", path: "/config/tenant", roles: ["admin", "compliance"] },
+      { key: "products", label: "Products", path: "/config/products", roles: ["risk", "compliance"] },
+      { key: "workflows", label: "Workflows", path: "/config/workflows", roles: ["compliance"] },
+      { key: "matrix", label: "Approval matrix", path: "/config/matrix", roles: ["risk", "compliance"] },
+      { key: "templates", label: "Documents and templates", path: "/config/templates", roles: ["compliance"] },
+      { key: "notifications", label: "Notifications", path: "/config/notifications", roles: ["compliance"] },
+      { key: "decisioning", label: "Decisioning", path: "/config/decisioning", roles: ["risk", "compliance"] },
+      { key: "models", label: "AI models", path: "/config/models", roles: ["risk", "compliance"] },
+      { key: "integrations", label: "Integrations", path: "/config/integrations", roles: ["compliance"] },
+      { key: "users", label: "Users and roles", path: "/config/users", roles: ["compliance"] },
+      { key: "tenant", label: "Tenant settings", path: "/config/tenant", roles: ["compliance"] },
     ],
   },
 ]
@@ -87,14 +87,16 @@ export const NAV_ITEMS: NavItem[] = NAV.flatMap((g) => g.items)
 
 /** Roles that can open a case page. */
 const CASE_ROLES: AccessRole[] = ["branch", "officer", "approver", "ops", "compliance", "risk"]
-const PRODUCT_ROLES: AccessRole[] = ["risk", "admin", "compliance"]
+const PRODUCT_ROLES: AccessRole[] = ["risk", "compliance"]
+/** Same roles as the "templates" list item — the detail page is just as restricted. */
+const TEMPLATE_ROLES: AccessRole[] = ["compliance"]
 
 export function baseOf(role: SessionRole): AccessRole {
   return role === "opssup" ? "ops" : role
 }
 
 export const LANDING: Record<SessionRole, RouteKey> = {
-  branch: "queues", officer: "queues", approver: "approvals", ops: "booking", opssup: "booking", risk: "dash-decision", compliance: "audit", admin: "products",
+  branch: "queues", officer: "queues", approver: "approvals", ops: "booking", opssup: "booking", risk: "dash-decision", compliance: "audit",
 }
 
 export function pathOf(key: RouteKey): string {
@@ -116,6 +118,8 @@ export function matchRoute(pathname: string): RouteMatch | null {
   if (caseMatch) return { key: "case", label: "All applications", group: "Applications", param: decodeURIComponent(caseMatch[1] as string) }
   const productMatch = /^\/config\/products\/([^/]+)$/.exec(p)
   if (productMatch) return { key: "product", label: "Products", group: "Configuration", param: decodeURIComponent(productMatch[1] as string) }
+  const templateMatch = /^\/config\/templates\/([^/]+)$/.exec(p)
+  if (templateMatch) return { key: "template", label: "Documents and templates", group: "Configuration", param: decodeURIComponent(templateMatch[1] as string) }
   return null
 }
 
@@ -127,6 +131,7 @@ export function allowed(role: SessionRole, key: string, flags: { ai: boolean } =
   const r = baseOf(role)
   if (key === "case") return CASE_ROLES.includes(r)
   if (key === "product") return PRODUCT_ROLES.includes(r)
+  if (key === "template") return TEMPLATE_ROLES.includes(r)
   if (key === "notifications" || key === "denied") return true
   if (key === "models" && !flags.ai) return false
   const item = NAV_ITEMS.find((i) => i.key === key)
@@ -160,6 +165,7 @@ export function hrefFor(target: string, role: SessionRole, flags: { ai: boolean 
   if (!allowed(role, key, flags)) return null
   if (key === "case") return `/applications/${param}`
   if (key === "product") return `/config/products/${param}`
+  if (key === "template") return `/config/templates/${param}`
   if (key === "booking" && param) return `/booking?case=${encodeURIComponent(param)}`
   const item = NAV_ITEMS.find((i) => i.key === key)
   return item ? item.path : null

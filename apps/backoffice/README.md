@@ -34,6 +34,7 @@ pnpm --filter backoffice test
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_WEB_URL` | `http://localhost:3002` | Target of the "Borrower web app" link in the top strip. |
+| `NEXT_PUBLIC_ADMIN_URL` | `http://localhost:3003` | Target of the "Admin console" link in the top strip. |
 
 ## Demo accounts
 
@@ -49,4 +50,5 @@ any six digits.
 | Loan operations supervisor (checker) | `opssupervisor@kalinawbank.ph` |
 | Credit risk manager | `creditrisk@kalinawbank.ph` |
 | Compliance and audit (read-only) | `compliance@kalinawbank.ph` |
-| Tenant administrator | `admin@kalinawbank.ph` |
+
+The tenant administrator no longer signs in here — see `apps/admin`.

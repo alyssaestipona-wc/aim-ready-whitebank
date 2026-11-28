@@ -7,9 +7,7 @@
  */
 import { useSyncExternalStore } from "react"
 
-import { FLAGS_COOKIE, SESSION_COOKIE } from "../lib/access"
-import { USERS } from "./constants"
-import type { RoleKey } from "./types"
+import { FLAGS_COOKIE, isSessionRole, SESSION_COOKIE, type SessionRole } from "../lib/access"
 
 export { FLAGS_COOKIE, SESSION_COOKIE }
 
@@ -25,12 +23,12 @@ function writeCookie(name: string, value: string | null): void {
   document.cookie = value === null ? `${name}=; Path=/; Max-Age=0; SameSite=Lax` : `${name}=${encodeURIComponent(value)}; Path=/; SameSite=Lax`
 }
 
-export function getSessionRole(): RoleKey | null {
+export function getSessionRole(): SessionRole | null {
   const v = readCookie(SESSION_COOKIE)
-  return v && Object.hasOwn(USERS, v) ? (v as RoleKey) : null
+  return isSessionRole(v) ? v : null
 }
 
-export function setSessionRole(role: RoleKey | null): void {
+export function setSessionRole(role: SessionRole | null): void {
   writeCookie(SESSION_COOKIE, role)
   for (const l of listeners) l()
 }
@@ -45,6 +43,6 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l)
 }
 
-export function useSessionRole(): RoleKey | null {
+export function useSessionRole(): SessionRole | null {
   return useSyncExternalStore(subscribe, getSessionRole, () => null)
 }

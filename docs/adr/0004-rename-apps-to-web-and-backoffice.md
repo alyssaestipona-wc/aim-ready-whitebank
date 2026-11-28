@@ -2,7 +2,9 @@
 
 ## Status
 Accepted. Supersedes ADR-0002's `apps/web`/`apps/admin`/`apps/backoffice`
-plan and ADR-0003's `apps/borrower-web`/`apps/staff-web` naming.
+plan and ADR-0003's `apps/borrower-web`/`apps/staff-web` naming. Its "There
+is no separate `apps/admin`" clause is in turn superseded by ADR-0005,
+which introduces `apps/admin` per the "future ADR" this one required.
 
 ## Context
 ADR-0002 planned three web apps: `apps/web`, `apps/admin`, `apps/backoffice`.

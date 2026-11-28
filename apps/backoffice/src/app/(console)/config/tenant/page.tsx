@@ -1,12 +1,10 @@
 "use client"
 
-import { ConfirmDialog, ListView, PageHeader, type ListFilterDef } from "@aim-ready/ui"
-import * as React from "react"
+import { ListView, PageHeader, type ListFilterDef, CheckRow, Toggle } from "@aim-ready/ui"
 
-import { CheckRow, Toggle, useRun } from "@/components/admin/bits"
 import { KeyValues, Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
-import { HOLIDAYS, isReadOnly, setAiModule } from "@/mock"
+import { HOLIDAYS } from "@/mock"
 
 type Holiday = (typeof HOLIDAYS)[number]
 /** Sort key for "today" (27 Nov) in the holiday calendar. */
@@ -17,14 +15,11 @@ const FILTERS: ListFilterDef<Holiday>[] = [
   { key: "when", label: "When", options: [["past", "Past"], ["upcoming", "Upcoming"]], test: (r, v) => (v === "past") === r[3] < TODAY_KEY },
 ]
 
-/** Read-only except the tenant administrator's module switch (PRD PLT-2). */
+/** Read-only here: the module switch (PRD PLT-2) moved to the admin console. */
 export default function TenantPage() {
   const ctx = useConsole()
-  const run = useRun()
-  const [flagOpen, setFlagOpen] = React.useState(false)
   if (!ctx) return null
-  const { role, s } = ctx
-  const can = role === "admin"
+  const { s } = ctx
   const on = s.flags.ai
   return (
     <>
@@ -43,7 +38,7 @@ export default function TenantPage() {
           />
         </Section>
         <Section title="Modules" tag="Turning a module off keeps its records">
-          <CheckRow label="AI credit scoring" value={<Toggle on={on} label="AI credit scoring" disabled={!can} title={isReadOnly(role) ? "Read-only access" : undefined} onToggle={() => setFlagOpen(true)} />} />
+          <CheckRow label="AI credit scoring" value={<Toggle on={on} label="AI credit scoring" disabled title="Tenant administrator only, in the admin console" onToggle={() => {}} />} />
           <CheckRow label="Origination and decisioning" value="Always on" />
         </Section>
       </div>
@@ -63,18 +58,6 @@ export default function TenantPage() {
           ]}
         />
       </Section>
-      <ConfirmDialog
-        open={flagOpen}
-        onOpenChange={setFlagOpen}
-        title={`${on ? "Turn off" : "Turn on"} AI credit scoring?`}
-        description={on ? "Model screens leave the navigation for everyone. Existing records are kept, not deleted." : "Model screens return to the navigation for permitted roles."}
-        okLabel={on ? "Turn off" : "Turn on"}
-        danger={on}
-        onConfirm={async () => {
-          const r = await run(setAiModule(!on))
-          if (!r.ok) return r.error
-        }}
-      />
     </>
   )
 }

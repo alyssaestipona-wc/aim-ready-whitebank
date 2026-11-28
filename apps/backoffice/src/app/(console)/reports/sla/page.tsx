@@ -1,8 +1,7 @@
 "use client"
 
-import { BarChart, PageHeader, StatusPill } from "@aim-ready/ui"
+import { BarChart, PageHeader, StatusPill, StaticTable } from "@aim-ready/ui"
 
-import { StaticTable } from "@/components/admin/bits"
 import { Kpi, KpiGrid, Section } from "@/components/bits"
 
 const TEAMS: Array<[string, string, string]> = [

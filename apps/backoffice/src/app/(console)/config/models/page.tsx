@@ -1,9 +1,8 @@
 "use client"
 
-import { BarChart, ConfirmDialog, ListView, NativeSelect, NativeSelectOption, PageHeader, StatusPill, type ListFilterDef } from "@aim-ready/ui"
+import { BarChart, ConfirmDialog, ListView, NativeSelect, NativeSelectOption, PageHeader, StatusPill, type ListFilterDef, CfgButton, CheckRow, StaticTable, TabBar, useRun } from "@aim-ready/ui"
 import * as React from "react"
 
-import { CfgButton, CheckRow, StaticTable, TabBar, useRun } from "@/components/admin/bits"
 import { Kpi, KpiGrid, Note, Section } from "@/components/bits"
 import { useConsole } from "@/components/use-console"
 import { isReadOnly, overrides, products, setAutomation, setKillSwitch, type AuditEntry } from "@/mock"

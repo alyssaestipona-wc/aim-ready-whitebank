@@ -1,9 +1,8 @@
 "use client"
 
-import { Button, Card, ListView, PageHeader, StatusPill, type ListFilterDef } from "@aim-ready/ui"
+import { Button, Card, ListView, PageHeader, StatusPill, type ListFilterDef, useRun } from "@aim-ready/ui"
 import Link from "next/link"
 
-import { useRun } from "@/components/admin/bits"
 import { useConsole } from "@/components/use-console"
 import { exportAml, type AmlCase } from "@/mock"
 

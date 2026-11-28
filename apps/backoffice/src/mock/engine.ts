@@ -25,6 +25,11 @@ export function isReadOnly(role: RoleKey | null): boolean {
   return role === "compliance"
 }
 
+/** Tenant administrator only — used to gate documents-and-templates editing (PC-5). */
+export function isAdmin(role: RoleKey | null): boolean {
+  return role === "admin"
+}
+
 export function findApp(s: StaffState, id: string | null | undefined): Application | undefined {
   return id ? s.apps.find((a) => a.id === id) : undefined
 }

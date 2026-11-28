@@ -1,9 +1,8 @@
 "use client"
 
-import { Card, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@aim-ready/ui"
+import { Card, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, VersionBadge } from "@aim-ready/ui"
 import { useRouter } from "next/navigation"
 
-import { VersionBadge } from "@/components/admin/bits"
 import { useConsole } from "@/components/use-console"
 import { peso, products } from "@/mock"
 

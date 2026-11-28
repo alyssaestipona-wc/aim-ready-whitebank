@@ -1,10 +1,9 @@
 "use client"
 
-import { Card, ListView, PageHeader, type ListFilterDef } from "@aim-ready/ui"
+import { Card, ListView, PageHeader, type ListFilterDef, TabBar } from "@aim-ready/ui"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
-import { TabBar } from "@/components/admin/bits"
 import { useConsole } from "@/components/use-console"
 import type { Application } from "@/mock"
 

@@ -9,7 +9,7 @@ configuration. In this phase every screen runs on simulated data.
 ## Requirements
 
 ### Requirement: Staff sign-in is two-step
-The console SHALL ask for email and password first. It SHALL show the authentication-code field only after a known staff email and correct password, and sign the user in after a six-digit code. The page SHALL NOT list demo accounts.
+The console SHALL ask for email and password first. It SHALL show the authentication-code field only after a known staff email and correct password, and sign the user in after a six-digit code. The page SHALL NOT list demo accounts. The seeded tenant-administrator email SHALL be refused here with a console-specific message instead of the generic incorrect-credentials error, since the administrator signs in at the separate admin console.
 
 #### Scenario: Wrong password
 - **GIVEN** the sign-in page
@@ -29,7 +29,12 @@ The console SHALL ask for email and password first. It SHALL show the authentica
 #### Scenario: Successful sign-in lands on the role's home screen
 - **GIVEN** the code step for `approver@kalinawbank.ph`
 - **WHEN** the approver completes the code step
-- **THEN** the approver lands on Approvals, and each other role lands on its own home screen (branch and loan officer: Work queues; loan operations and supervisor: Booking; credit risk: Decisioning dashboard; compliance: Audit log; administrator: Products)
+- **THEN** the approver lands on Approvals, and each other role lands on its own home screen (branch and loan officer: Work queues; loan operations and supervisor: Booking; credit risk: Decisioning dashboard; compliance: Audit log)
+
+#### Scenario: Administrator email is refused here
+- **GIVEN** the sign-in page at the email and password step
+- **WHEN** the seeded tenant-administrator email is submitted with its correct password
+- **THEN** a red inline error "Tenant administrators sign in at the separate admin console." is shown and no code field appears
 
 ### Requirement: Staff routes are role-scoped and checked on the server
 Each staff route SHALL be reachable only by the roles the prototype's navigation grants. The sidebar SHALL list only permitted routes. A request for a forbidden route SHALL be refused before the page renders, by a server-side session check, and SHALL show the "You don’t have access to this" screen.
@@ -56,7 +61,7 @@ Each staff route SHALL be reachable only by the roles the prototype's navigation
 
 ### Requirement: Console shell
 Every signed-in console page SHALL show:
-- a slim top strip with the app name and a link to the borrower web app;
+- a slim top strip with the app name, a link to the borrower web app, and a link to the admin console;
 - a header with breadcrumbs, a notifications bell and an account menu;
 - a grouped sidebar with the user's name, role and a sign-out button beside them.
 
@@ -71,6 +76,11 @@ The header SHALL NOT have a search bar. The Guided demo control SHALL NOT appear
 - **GIVEN** a signed-in staff user
 - **WHEN** a route that does not exist is requested
 - **THEN** a "Not found" page with a "Go to my work" button is shown
+
+#### Scenario: Top strip links to the admin console
+- **GIVEN** any signed-in staff user
+- **WHEN** the top strip's admin console link is selected
+- **THEN** the admin console's sign-in page opens in place of the staff console, with no staff session carried over
 
 ### Requirement: Notifications
 The bell SHALL open a dropdown with role-specific notifications, newest first, with an unread count. It SHALL load 10 more as the list is scrolled, and offer "Mark all as read" and "View all notifications". The notifications page SHALL show an unread count and a paginated, filterable list (10 per page). It SHALL NOT show summary cards.
@@ -259,7 +269,7 @@ Loan operations SHALL generate documents and send them for e-signature, then sub
 - **THEN** the case appears in Booking exceptions with the error. Retry books it with the same idempotency key and shows the new loan number
 
 ### Requirement: Reports
-Officers, approvers, credit risk, compliance and administrators SHALL see the origination funnel, turnaround and SLA, and decisioning dashboards. Credit risk, compliance and administrators SHALL also see the regulatory extracts. Every chart SHALL use the single accent colour.
+Officers, approvers, credit risk and compliance SHALL see the origination funnel, turnaround and SLA, and decisioning dashboards. Credit risk and compliance SHALL also see the regulatory extracts. Every chart SHALL use the single accent colour.
 
 #### Scenario: Dashboard opens
 - **GIVEN** credit risk is signed in
@@ -267,7 +277,7 @@ Officers, approvers, credit risk, compliance and administrators SHALL see the or
 - **THEN** it shows the straight-through and override rates, the approve, refer and decline mix, the top referral triggers and automation by product, with all bars in the accent colour
 
 ### Requirement: Regulatory extract validation
-Credit risk and administrators SHALL be able to generate the monthly credit bureau (CIC) file. A file with validation errors SHALL NOT be markable as submitted until it is fixed and regenerated. Each step SHALL be audit-logged.
+Credit risk SHALL be able to generate the monthly credit bureau (CIC) file. A file with validation errors SHALL NOT be markable as submitted until it is fixed and regenerated. Each step SHALL be audit-logged.
 
 #### Scenario: File with errors
 - **GIVEN** credit risk on Regulatory extracts
@@ -280,7 +290,7 @@ Credit risk and administrators SHALL be able to generate the monthly credit bure
 - **THEN** the file shows as submitted with today's date and the audit log records it
 
 ### Requirement: Compliance views
-Compliance SHALL see the audit log, consent records, AML escalations, related-party lending and model governance findings. Credit risk SHALL also see model governance, and administrators SHALL also see the audit log. Each SHALL be filterable and paginated. Marking an AML escalation reviewed and exported SHALL be recorded in the audit log.
+Compliance SHALL see the audit log, consent records, AML escalations, related-party lending and model governance findings. Credit risk SHALL also see model governance. Each SHALL be filterable and paginated. Marking an AML escalation reviewed and exported SHALL be recorded in the audit log.
 
 #### Scenario: AML escalation exported
 - **GIVEN** compliance on AML escalations with an open escalation
@@ -293,32 +303,43 @@ Compliance SHALL see the audit log, consent records, AML escalations, related-pa
 - **THEN** only matching entries are shown, paginated
 
 ### Requirement: Tenant configuration screens
-Credit risk, administrators and compliance SHALL see the configuration screens their role is granted:
-- products and campaigns;
-- workflows, approval matrix, templates and notifications;
-- decisioning;
-- AI models (behind the AI flag);
-- integrations, users and tenant settings.
-
-Only product parameters, the rule set, the kill switch, automation modes, module flags and the failure drills SHALL be changeable. Every other configuration screen SHALL be read-only, with no publish path.
+Credit risk and compliance SHALL see the configuration screens their role is granted: products and campaigns; workflows, approval matrix, templates and notifications; decisioning; AI models (behind the AI flag); integrations, users and tenant settings.
 
 #### Scenario: Read-only configuration
-- **GIVEN** the administrator is signed in
-- **WHEN** the approval matrix, workflows, templates, notifications or users screen is opened
+- **GIVEN** compliance is signed in
+- **WHEN** the workflows, templates, notifications or users screen is opened
 - **THEN** the configuration is shown with no edit or publish control
 
-### Requirement: Configuration changes are maker-checker
-Product parameter and rule-set changes SHALL follow draft, then submit for review, then approve and publish by a different credit risk or administrator user. The author SHALL NOT publish their own change. The UI SHALL state that this check is simulated on the client until the API enforces it.
+#### Scenario: Credit risk edits the approval matrix
+- **GIVEN** credit risk on the approval matrix
+- **WHEN** an authority level's amount limit is edited and saved
+- **THEN** the matrix's shared version increments at once and the audit log records who changed it
 
-#### Scenario: Author cannot publish own rule set
-- **GIVEN** a draft rule set submitted for review by the current user
-- **WHEN** "Approve and publish" is selected
-- **THEN** "Approve and publish" is disabled for them with the explanation "You submitted this change; a different person must approve it"
+#### Scenario: Templates are view-only here
+- **GIVEN** compliance opens a template's detail page (the only role here templates is granted to)
+- **WHEN** the page renders
+- **THEN** the merge-field body is shown with no insert buttons, Save, Discard or Delete control, and the live preview still renders with sample case data
 
-#### Scenario: Second person publishes a product change
-- **GIVEN** a personal-loan draft submitted by credit risk
-- **WHEN** the administrator selects "Approve and publish"
-- **THEN** the product version increments, the new limits apply, and the audit log names both people
+### Requirement: Which configuration changes are editable in this app
+Product parameters, the rule set, the approval matrix, the kill switch and automation modes SHALL be changeable, by credit risk. Documents and templates SHALL be viewable in full detail, including its live preview, but not editable here — editing is the admin console's. Every other configuration screen SHALL be read-only, with no publish path.
+
+#### Scenario: Matrix edit is credit-risk-only here
+- **GIVEN** the approval matrix screen
+- **WHEN** it is opened by any role other than credit risk
+- **THEN** no edit control is shown, only the published values
+
+#### Scenario: Matrix version here is independent of the admin console's
+- **GIVEN** credit risk edits an authority level here
+- **WHEN** the same level is later viewed in the admin console
+- **THEN** the admin console shows its own, unaffected version — per ADR-0003/0005, the two apps keep independent mock stores
+
+### Requirement: Credit risk drafts and submits configuration changes for review
+Product parameter and rule-set changes SHALL follow draft, then submit for review, by credit risk. Approving and publishing a submitted draft is the administrator's action and SHALL happen only in the admin console — the control SHALL NOT be enabled here for anyone, including the draft's own author. The UI SHALL state that the administrator publishes it there, and that this check is simulated on the client until the API enforces it.
+
+#### Scenario: Submitted draft has no publish control here
+- **GIVEN** a draft rule set submitted for review
+- **WHEN** the submitted draft is viewed in this app, by its own author or by any other staff-console role
+- **THEN** no "Approve and publish" control is shown here; a note states the administrator publishes it in the admin console
 
 #### Scenario: Invalid product draft
 - **GIVEN** a product draft whose auto-approval limit exceeds its maximum amount
@@ -339,35 +360,9 @@ Per PRD story AIS-7, credit risk SHALL, from the AI models screen's automation c
 - **THEN** automated decisions resume and the audit log records who turned it off
 
 #### Scenario: Other roles cannot toggle
-- **GIVEN** the administrator on AI models
+- **GIVEN** compliance on AI models
 - **WHEN** the kill switch control is shown
 - **THEN** it is disabled
-
-### Requirement: Module feature flags are a tenant setting
-Per PRD story PLT-2, the tenant administrator SHALL turn the AI credit scoring module on or off from Tenant settings with one confirmation. Turning it off SHALL remove its navigation for every role at once and state that existing records are kept. Each change SHALL be audit-logged.
-
-#### Scenario: AI flag off hides models
-- **GIVEN** the administrator on Tenant settings
-- **WHEN** the AI scoring flag is turned off and confirmed
-- **THEN** the dialog has stated that existing records are kept, the AI models screen leaves the navigation, its route is refused for every role, and the audit log records the change
-
-#### Scenario: AI flag back on
-- **GIVEN** the AI flag is off
-- **WHEN** the administrator turns it on and confirms
-- **THEN** AI models returns to the navigation for permitted roles and the audit log records the change
-
-### Requirement: Failure drills are admin-only and logged
-Only the tenant administrator SHALL toggle the simulated bureau-outage and core-timeout drills, from Integrations. Each toggle SHALL be audit-logged.
-
-#### Scenario: Admin turns on a drill
-- **GIVEN** the administrator on Integrations
-- **WHEN** the bureau-outage drill is turned on
-- **THEN** the bureau shows as an outage (simulated), a toast confirms it, and the audit log records it
-
-#### Scenario: Other roles cannot toggle drills
-- **GIVEN** compliance on Integrations
-- **WHEN** the screen is shown
-- **THEN** both drill controls are disabled
 
 ### Requirement: Simulated state is per browser and resettable
 The console SHALL keep simulated changes in the browser so they survive reloads. It SHALL offer "Reset demo data" with a confirmation, which restores the seed data and keeps the user signed in. Every simulated record SHALL carry a tenant identifier.

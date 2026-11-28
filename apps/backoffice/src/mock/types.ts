@@ -202,6 +202,31 @@ export type RuleSetConfig = {
 
 export type TriggerKey = "grey" | "limit" | "thin" | "mismatch" | "dti" | "fraud" | "related" | "confidence"
 
+/**
+ * One row of the approval matrix. Amounts are free text ("Up to ₱1,000,000")
+ * rather than `Centavos`: this configures what the screen displays, not a
+ * value fed into the real approval-authority check (a separate, unbuilt
+ * concern — see backlog WF-8).
+ */
+export type AuthorityLevel = {
+  level: string
+  who: string
+  amount: string
+  products: string
+  grades: string
+  exceptions: string
+}
+
+/** One document/e-signature template, with its merge-field body. */
+export type Template = {
+  id: string
+  name: string
+  usedFor: string
+  retention: string
+  version: string
+  body: string
+}
+
 export type DecisionConfig = {
   ruleset: RuleSetConfig
   rules: PolicyRule[]
@@ -211,6 +236,9 @@ export type DecisionConfig = {
   killSwitch: boolean
   bureauDown: boolean
   coreFailNext: boolean
+  matrix: AuthorityLevel[]
+  matrixVersion: string
+  templates: Template[]
   /** Draft rule set being edited, or null. */
   draft: { rules: PolicyRule[]; bands: { approve: number; decline: number }; triggers?: Record<TriggerKey, boolean> } | null
 }

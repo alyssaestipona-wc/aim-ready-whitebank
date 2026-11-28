@@ -6,7 +6,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, IsNull, QueryFailedError, Repository } from 'typeorm';
+import {
+  Between,
+  DataSource,
+  IsNull,
+  QueryFailedError,
+  Repository,
+} from 'typeorm';
 import {
   aiRecommendation,
   formatPeso,
@@ -103,6 +109,23 @@ export type DecideApplicationResult =
   | { ok: true; stage: 'Offer'; monthlyPayment: number }
   | { ok: true; stage: 'Declined' }
   | { ok: false; error: string };
+
+/**
+ * Tenant-wide, not per-approver - there is no per-approver assignment field
+ * on `ApplicationEntity` (unlike the officer's `assigneeId`), so these are
+ * team-level KPIs, consistent with every other team-level KPI already in
+ * this codebase (SLA watch, Reports). See design.md of
+ * `real-approvals-queue`.
+ */
+export type ApprovalsSummary = {
+  waitingOnMe: number;
+  decidedToday: number;
+  overridesThisWeek: number;
+  medianMinutesToDecide: number | null;
+};
+
+export type ApprovePreviewResult =
+  { ok: true; monthlyPayment: number } | { ok: false; error: string };
 
 export type PickApplicationResult = { ok: true } | { ok: false; error: string };
 
@@ -602,6 +625,124 @@ export class ApplicationsService {
       stageEnteredAt: new Date(),
     });
     return { ok: true, stage: 'Declined' };
+  }
+
+  /**
+   * Tenant-wide team KPIs for the real approvals queue - see
+   * `ApprovalsSummary`'s own doc comment for why this is tenant-wide, not
+   * per-approver. `decidedToday`/`overridesThisWeek`/the median are all
+   * derived from one `decidedAt`-in-the-last-7-days fetch rather than three
+   * separate queries.
+   */
+  async approvalsSummary(user: SessionUser): Promise<ApprovalsSummary> {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+
+    let waitingOnMe: number;
+    let decidedThisWeek: ApplicationEntity[];
+    try {
+      waitingOnMe = await this.applications.count({
+        where: { tenantId: user.tenantId, stage: 'Approval' },
+      });
+      decidedThisWeek = await this.applications.find({
+        where: {
+          tenantId: user.tenantId,
+          decidedAt: Between(startOfWeek, new Date()),
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Approvals summary failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+
+    const decidedToday = decidedThisWeek.filter(
+      (r) => r.decidedAt! >= startOfToday,
+    ).length;
+    const overridesThisWeek = decidedThisWeek.filter(
+      (r) => r.recommendation?.overrideLevel != null,
+    ).length;
+    const minutesToDecide = decidedThisWeek
+      .filter((r) => r.recommendation)
+      .map(
+        (r) =>
+          (r.decidedAt!.getTime() -
+            new Date(r.recommendation!.recommendedAt).getTime()) /
+          60000,
+      )
+      .sort((a, b) => a - b);
+    const mid = Math.floor(minutesToDecide.length / 2);
+    const medianMinutesToDecide =
+      minutesToDecide.length === 0
+        ? null
+        : minutesToDecide.length % 2 === 1
+          ? minutesToDecide[mid]
+          : (minutesToDecide[mid - 1] + minutesToDecide[mid]) / 2;
+
+    return {
+      waitingOnMe,
+      decidedToday,
+      overridesThisWeek,
+      medianMinutesToDecide,
+    };
+  }
+
+  /**
+   * Recomputes exactly what `decide()` itself computes on approval, writing
+   * nothing - see design.md of `real-approvals-queue`. Shares `decide()`'s
+   * own preconditions (stage `Approval`, non-null recommendation) and its
+   * segregation-of-duties check, so this can never preview a figure for a
+   * case `decide()` would then refuse to approve. Does not share the
+   * delegated-authority check: that's a refusal reason for approving, not
+   * for previewing what approving would produce.
+   */
+  async previewApproval(
+    user: SessionUser,
+    applicationId: string,
+  ): Promise<ApprovePreviewResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Approval preview failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    const recommendation = application.recommendation;
+    if (application.stage !== 'Approval' || !recommendation) {
+      throw new BadRequestException('Application is not awaiting a decision.');
+    }
+    if (recommendation.by === user.sub) {
+      return {
+        ok: false,
+        error:
+          'You recommended this case. A different approver must decide it.',
+      };
+    }
+    const grade = application.decision.grade;
+    if (!grade) {
+      throw new BadRequestException('Application is not awaiting a decision.');
+    }
+    return {
+      ok: true,
+      monthlyPayment: monthlyPayment(
+        recommendation.amount,
+        recommendation.tenor,
+        GRADE_RATE[grade],
+      ),
+    };
   }
 
   /**

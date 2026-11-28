@@ -298,6 +298,21 @@ export const returnToOfficerResponseSchema = z.union([
 ])
 export type ReturnToOfficerResponse = z.infer<typeof returnToOfficerResponseSchema>
 
+/** Tenant-wide team KPIs for the real approvals queue - never per-approver. See design.md of `real-approvals-queue`. */
+export const approvalsSummarySchema = z.object({
+  waitingOnMe: z.number().int().nonnegative(),
+  decidedToday: z.number().int().nonnegative(),
+  overridesThisWeek: z.number().int().nonnegative(),
+  medianMinutesToDecide: z.number().nonnegative().nullable(),
+})
+export type ApprovalsSummaryResponse = z.infer<typeof approvalsSummarySchema>
+
+export const approvePreviewResponseSchema = z.union([
+  z.object({ ok: z.literal(true), monthlyPayment: z.number().int() }),
+  z.object({ ok: z.literal(false), error: z.string().min(1) }),
+])
+export type ApprovePreviewResponse = z.infer<typeof approvePreviewResponseSchema>
+
 export const tenantConfigResponseSchema = z.object({
   killSwitch: z.boolean(),
   bureauDown: z.boolean(),

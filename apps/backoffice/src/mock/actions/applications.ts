@@ -1,4 +1,6 @@
 import {
+  approvalsSummarySchema,
+  approvePreviewResponseSchema,
   decideApplicationRequestSchema,
   decideApplicationResponseSchema,
   pickApplicationResponseSchema,
@@ -10,6 +12,8 @@ import {
   returnToOfficerResponseSchema,
   staffApplicationDetailSchema,
   staffApplicationListResponseSchema,
+  type ApprovalsSummaryResponse,
+  type ApprovePreviewResponse,
   type DecideApplicationRequest,
   type DecideApplicationResponse,
   type PickApplicationResponse,
@@ -205,6 +209,45 @@ export async function returnToOfficer(id: string): Promise<Result<ReturnToOffice
     return { ok: false, error: UNAVAILABLE_ERROR }
   }
   const parsed = returnToOfficerResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
+  return { ok: true, data: parsed.data }
+}
+
+export async function getApprovalsSummary(): Promise<Result<ApprovalsSummaryResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/approvals-summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = approvalsSummarySchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
+  return { ok: true, data: parsed.data }
+}
+
+export async function previewApproval(id: string): Promise<Result<ApprovePreviewResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/approve-preview`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = approvePreviewResponseSchema.safeParse(body)
   if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
   if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
   return { ok: true, data: parsed.data }

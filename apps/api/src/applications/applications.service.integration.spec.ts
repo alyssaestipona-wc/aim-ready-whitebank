@@ -1070,6 +1070,104 @@ describe('ApplicationsService (integration)', () => {
     });
   });
 
+  describe('findMineForBorrower', () => {
+    it("returns only the caller's own applications for their tenant", async () => {
+      const result = await service.create(user(), validDto());
+      if (!result.ok) throw new Error('expected success');
+
+      const rows = await service.findMineForBorrower(user());
+      expect(rows.map((r) => r.id)).toEqual([result.applicationId]);
+      expect(rows[0]).toMatchObject({
+        productCode: 'PL',
+        amount: 15_000_000,
+        tenor: 24,
+        outcome: 'approve',
+        declineReasonCode: null,
+      });
+      // Never the internal fields a borrower shouldn't see.
+      expect(rows[0]).not.toHaveProperty('score');
+      expect(rows[0]).not.toHaveProperty('grade');
+      expect(rows[0]).not.toHaveProperty('reviewerId');
+    });
+
+    it("never includes another borrower's application, same tenant", async () => {
+      const otherBorrower = await users.save(
+        users.create({
+          tenantId: TENANT_ID,
+          email: 'other-borrower-test@email.com',
+          passwordHash: 'unused-in-this-test',
+          appScope: 'borrower',
+          role: 'borrower',
+          name: 'Other Borrower',
+        }),
+      );
+      await applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId: otherBorrower.id,
+          productCode: 'SL',
+          amount: 9_000_000,
+          tenor: 12,
+          income: 4_000_000,
+          obligations: 500_000,
+          purpose: 'Other borrower',
+          stage: 'Offer' as const,
+          decision: { outcome: 'approve' } as never,
+        }),
+      );
+      const result = await service.create(user(), validDto());
+      if (!result.ok) throw new Error('expected success');
+
+      const rows = await service.findMineForBorrower(user());
+      expect(rows.map((r) => r.id)).toEqual([result.applicationId]);
+
+      await consents.query(
+        'DELETE FROM consents WHERE application_id IN (SELECT id FROM applications WHERE borrower_id = $1)',
+        [otherBorrower.id],
+      );
+      await applications.query(
+        'DELETE FROM applications WHERE borrower_id = $1',
+        [otherBorrower.id],
+      );
+      await users.query('DELETE FROM users WHERE id = $1', [otherBorrower.id]);
+    });
+
+    it("never includes another tenant's application, even with a colliding borrower id", async () => {
+      await applications.save(
+        applications.create({
+          tenantId: 'another-tenant',
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Offer' as const,
+          decision: { outcome: 'approve' } as never,
+        }),
+      );
+      const rows = await service.findMineForBorrower(user());
+      expect(rows).toHaveLength(0);
+    });
+
+    it('throws a distinct failure when the application store is unreachable', async () => {
+      const brokenApplications = {
+        find: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+        tenantConfig,
+      );
+      await expect(
+        brokenService.findMineForBorrower(user()),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
   describe('queues and pick', () => {
     const openApp = (over: Partial<ApplicationEntity> = {}) =>
       applications.save(

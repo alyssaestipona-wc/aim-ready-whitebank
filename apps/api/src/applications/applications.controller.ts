@@ -16,6 +16,7 @@ import type { RequestWithSession } from '../auth/guards/session-role.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
   ApplicationsService,
+  type BorrowerApplicationListItem,
   type DecideApplicationResult,
   type PickApplicationResult,
   type RecommendApplicationResult,
@@ -71,6 +72,18 @@ export class ApplicationsController {
       { sub: user.sub, tenantId: user.tenantId },
       query,
     );
+  }
+
+  // Declared before `GET /:id` so NestJS matches the literal "mine" segment
+  // first - a route registered after a param route can still shadow it, but
+  // a route registered before it always wins when both could match.
+  @Get('mine')
+  mine(@Req() req: RequestWithSession): Promise<BorrowerApplicationListItem[]> {
+    const user = req.user!;
+    return this.applications.findMineForBorrower({
+      sub: user.sub,
+      tenantId: user.tenantId,
+    });
   }
 
   @Get(':id')

@@ -80,6 +80,22 @@ export type StaffApplicationListItem = {
   slaHoursLeft: number | null;
 };
 
+/**
+ * Deliberately narrower than `StaffApplicationListItem` - no score, grade,
+ * rules, reviewerId, ruleSetVersion, or modelVersion. See
+ * `findMineForBorrower()`.
+ */
+export type BorrowerApplicationListItem = {
+  id: string;
+  productCode: string;
+  amount: number;
+  tenor: number;
+  stage: ApplicationStage;
+  outcome: Outcome;
+  declineReasonCode: string | null;
+  createdAt: Date;
+};
+
 export type RequestInfoResult = { ok: true } | { ok: false; error: string };
 export type ResolveInfoResult = { ok: true } | { ok: false; error: string };
 
@@ -392,6 +408,40 @@ export class ApplicationsService {
       grade: r.decision.grade,
       assigneeId: r.assigneeId,
       slaHoursLeft: slaHoursLeft(r.stage, r.stageEnteredAt),
+    }));
+  }
+
+  /**
+   * Borrower-facing list - deliberately narrower than `StaffApplicationListItem`:
+   * no score/grade/rules/reviewerId/ruleSetVersion/modelVersion, nothing a
+   * borrower shouldn't see. Scoped to the caller's own tenant AND their own
+   * `borrowerId`, never just tenant-wide like the staff list.
+   */
+  async findMineForBorrower(
+    user: SessionUser,
+  ): Promise<BorrowerApplicationListItem[]> {
+    let rows: ApplicationEntity[];
+    try {
+      rows = await this.applications.find({
+        where: { tenantId: user.tenantId, borrowerId: user.sub },
+        order: { createdAt: 'DESC' },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Borrower application list failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    return rows.map((r) => ({
+      id: r.id,
+      productCode: r.productCode,
+      amount: r.amount,
+      tenor: r.tenor,
+      stage: r.stage,
+      outcome: r.decision.outcome,
+      declineReasonCode: r.declineReasonCode,
+      createdAt: r.createdAt,
     }));
   }
 

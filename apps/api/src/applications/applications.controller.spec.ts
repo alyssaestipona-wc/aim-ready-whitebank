@@ -34,10 +34,11 @@ describe('ApplicationsController roles', () => {
     expect(rolesOf(proto.detail)).toEqual(STAFF_ROLES);
   });
 
-  it('leaves create/close borrower-only at the class level', () => {
+  it('leaves create/close/mine borrower-only at the class level', () => {
     expect(rolesOf(ApplicationsController)).toEqual(['borrower']);
     expect(rolesOf(proto.create)).toBeUndefined();
     expect(rolesOf(proto.close)).toBeUndefined();
+    expect(rolesOf(proto.mine)).toBeUndefined();
   });
 
   it('restricts decide to the approver role only, not every staff role', () => {

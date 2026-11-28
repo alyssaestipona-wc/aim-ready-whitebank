@@ -154,6 +154,28 @@ export type StaffApplicationListItem = z.infer<typeof staffApplicationListItemSc
 export const staffApplicationListResponseSchema = z.array(staffApplicationListItemSchema)
 export type StaffApplicationListResponse = z.infer<typeof staffApplicationListResponseSchema>
 
+/**
+ * A borrower's own list row. Deliberately narrower than
+ * `staffApplicationListItemSchema` - no score, grade, rules, reviewerId,
+ * ruleSetVersion, or modelVersion. Structurally distinct (not a subset/pick
+ * of the staff schema) so a future change can't accidentally leak staff-only
+ * fields to a borrower through this path.
+ */
+export const borrowerApplicationListItemSchema = z.object({
+  id: z.string().min(1),
+  productCode: z.string().min(1),
+  amount: z.number().int(),
+  tenor: z.number().int(),
+  stage: z.string().min(1),
+  outcome: z.string().min(1),
+  declineReasonCode: z.string().min(1).nullable(),
+  createdAt: z.coerce.date(),
+})
+export type BorrowerApplicationListItem = z.infer<typeof borrowerApplicationListItemSchema>
+
+export const borrowerApplicationListResponseSchema = z.array(borrowerApplicationListItemSchema)
+export type BorrowerApplicationListResponse = z.infer<typeof borrowerApplicationListResponseSchema>
+
 /** The owning officer's recommendation on a `Review`-stage application, once made. */
 export const recommendationSchema = z.object({
   by: z.string().min(1),

@@ -68,6 +68,13 @@ export class ApplicationEntity {
   @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
   decidedAt!: Date | null;
 
+  /** The officer who claimed this application from the Unassigned queue. */
+  @Column({ name: 'assignee_id', type: 'uuid', nullable: true })
+  assigneeId!: string | null;
+
+  @Column({ name: 'assigned_at', type: 'timestamptz', nullable: true })
+  assignedAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

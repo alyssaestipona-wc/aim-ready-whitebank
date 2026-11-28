@@ -1,10 +1,12 @@
 import {
   decideApplicationRequestSchema,
   decideApplicationResponseSchema,
+  pickApplicationResponseSchema,
   staffApplicationDetailSchema,
   staffApplicationListResponseSchema,
   type DecideApplicationRequest,
   type DecideApplicationResponse,
+  type PickApplicationResponse,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from "@aim-ready/contracts"
@@ -26,13 +28,14 @@ const UNAVAILABLE_ERROR = "We can't load applications right now. Try again short
 const SESSION_ERROR = "Your session has ended. Sign in again."
 
 export async function listApplications(
-  filters: { stage?: string; product?: string } = {},
+  filters: { stage?: string; product?: string; queue?: "mine" | "unassigned" } = {},
 ): Promise<Result<StaffApplicationListItem[]>> {
   const token = getSessionToken()
   if (!token) return { ok: false, error: SESSION_ERROR }
   const params = new URLSearchParams()
   if (filters.stage) params.set("stage", filters.stage)
   if (filters.product) params.set("product", filters.product)
+  if (filters.queue) params.set("queue", filters.queue)
   const qs = params.toString()
 
   let body: unknown
@@ -95,6 +98,27 @@ export async function decideApplication(
   if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
   // A business refusal (e.g. above authority, bad reason code) isn't a
   // fetch/schema failure - surface its own message, not the generic one.
+  if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
+  return { ok: true, data: parsed.data }
+}
+
+export async function pickApplication(id: string): Promise<Result<PickApplicationResponse>> {
+  const token = getSessionToken()
+  if (!token) return { ok: false, error: SESSION_ERROR }
+
+  let body: unknown
+  try {
+    const res = await fetch(`${API_BASE_URL}/applications/${encodeURIComponent(id)}/pick`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return { ok: false, error: UNAVAILABLE_ERROR }
+    body = await res.json()
+  } catch {
+    return { ok: false, error: UNAVAILABLE_ERROR }
+  }
+  const parsed = pickApplicationResponseSchema.safeParse(body)
+  if (!parsed.success) return { ok: false, error: UNAVAILABLE_ERROR }
   if (!parsed.data.ok) return { ok: false, error: parsed.data.error }
   return { ok: true, data: parsed.data }
 }

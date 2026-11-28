@@ -58,6 +58,8 @@ export type Offer = { amount: Centavos; tenor: number; grade: Grade }
 export type Application = {
   tenantId: TenantId
   id: string
+  /** The real application id apps/api persisted this under (real-application-intake). */
+  serverId: string
   borrower: string
   name: string
   product: ProductCode

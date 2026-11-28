@@ -2,6 +2,9 @@ import 'reflect-metadata';
 import { DataSource, type DataSourceOptions } from 'typeorm';
 
 import { UserEntity } from '../users/user.entity';
+import { ApplicationEntity } from '../applications/application.entity';
+import { BorrowerProfileEntity } from '../applications/borrower-profile.entity';
+import { ConsentEntity } from '../applications/consent.entity';
 
 /**
  * Local PostgreSQL defaults match the `aimready`/`aimready_dev` role and
@@ -15,7 +18,12 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME ?? 'aimready',
   password: process.env.DB_PASSWORD ?? 'aimready_dev',
   database: process.env.DB_NAME ?? 'aimready',
-  entities: [UserEntity],
+  entities: [
+    UserEntity,
+    ApplicationEntity,
+    ConsentEntity,
+    BorrowerProfileEntity,
+  ],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   synchronize: false,
 };

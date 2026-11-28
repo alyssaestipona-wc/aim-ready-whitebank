@@ -1,7 +1,7 @@
-import { formatPeso, simulateDecision, type Centavos, type DecisionRecord } from "@aim-ready/core"
-import { loginResponseSchema } from "@aim-ready/contracts"
+import { formatPeso, type Centavos, type DecisionRecord } from "@aim-ready/core"
+import { createApplicationResponseSchema, loginResponseSchema } from "@aim-ready/contracts"
 
-import { API_BASE_URL, BANK_STEP_MS, BORROWERS, POLICY, PRODUCTS, TENANT, TODAY, UPLOAD_LIMIT_MB } from "./config"
+import { API_BASE_URL, BANK_STEP_MS, BORROWERS, PRODUCTS, TENANT, TODAY, UPLOAD_LIMIT_MB } from "./config"
 import { currentBorrower, myApp, productName } from "./selectors"
 import type { Store } from "./store"
 import type { Application, BorrowerState, ProductCode, Result } from "./types"
@@ -12,12 +12,16 @@ import type { Application, BorrowerState, ProductCode, Result } from "./types"
  * this module for API calls without touching the screens.
  *
  * SIMULATED: this module also stands in for the bank's staff (see
- * `advanceBank`), because the portal has no shared back office yet.
+ * `advanceBank`), because the portal has no shared back office yet - real
+ * identity (real-identity-service) and real application intake/decisioning
+ * (real-application-intake) have already landed; everything from Info
+ * requested onward is still this module's own simulation.
  */
 
 export const SESSION_COOKIE = "wbl_borrower_session"
 export const SIMULATED_STEP = "(simulated bank step)"
 const SERVICE_UNAVAILABLE_ERROR = "We can't sign you in right now. Try again shortly."
+const SUBMIT_UNAVAILABLE_ERROR = "We couldn't submit your application right now. Try again shortly."
 
 /** "27 Nov, 10:32": the prototype's logical clock, two minutes per event. */
 function stamp(s: BorrowerState): string {
@@ -30,6 +34,27 @@ function stamp(s: BorrowerState): string {
 
 function log(s: BorrowerState, a: Application, what: string, who: string) {
   a.hist.push({ who, what, when: stamp(s) })
+}
+
+/** Best-effort, fire-and-forget: errors are swallowed, never surfaced to the UI. */
+async function closeApplication(serverId: string, stage: "Disbursed" | "Declined" | "Withdrawn"): Promise<void> {
+  const token = getSessionToken()
+  if (!token) return
+  try {
+    await fetch(`${API_BASE_URL}/applications/${serverId}/close`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ stage }),
+    })
+  } catch {
+    // Best-effort sync; the next close attempt (if any) will retry.
+  }
+}
+
+function getSessionToken(): string | null {
+  if (typeof document === "undefined") return null
+  const hit = document.cookie.split("; ").find((c) => c.startsWith(`${SESSION_COOKIE}=`))
+  return hit ? decodeURIComponent(hit.slice(SESSION_COOKIE.length + 1)) : null
 }
 
 function setCookie(value: string | null) {
@@ -56,15 +81,10 @@ export type UploadChoice = "" | "ok" | "type" | "size"
 
 export type ActionOptions = {
   now?: () => number
-  /** Simulated network/check latency; tests pass an instant one. */
-  wait?: (ms: number) => Promise<void>
 }
-
-const realWait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 export function createActions(store: Store, opts: ActionOptions = {}) {
   const now = opts.now ?? (() => Date.now())
-  const wait = opts.wait ?? realWait
 
   function respondInfo(s: BorrowerState, a: Application) {
     const b = BORROWERS[a.borrower]
@@ -90,6 +110,7 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
     let moved = 0
     const due = store.getState().apps.some((a) => a.waitingSince !== null && at - a.waitingSince >= BANK_STEP_MS)
     if (!due) return 0
+    const disbursed: string[] = []
     store.update((s) => {
       for (const a of s.apps) {
         if (a.waitingSince === null || at - a.waitingSince < BANK_STEP_MS) continue
@@ -120,11 +141,16 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
           a.stage = "Disbursed"
           a.disbTo = b ? b.account : "your Kalinaw account"
           log(s, a, `Core created loan account ${a.loanNo}; disbursed ${formatPeso(a.offer?.amount ?? a.amount)} to ${a.disbTo} ${SIMULATED_STEP}`, "System")
+          disbursed.push(a.serverId)
         } else {
           moved--
         }
       }
     })
+    // Best-effort: tells apps/api this application is closed, so its
+    // duplicate-open-application check stays correct later. Never blocks
+    // the (synchronous) simulated stage transition above on the network.
+    for (const serverId of disbursed) void closeApplication(serverId, "Disbursed")
     return moved
   }
 
@@ -199,26 +225,58 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
       return null
     },
 
-    /** Runs the simulated checks and decision, then creates the application. */
+    /**
+     * Client-side checks are UX-only pre-validation now (AGENTS.md): the
+     * real authority is `apps/api`'s `/applications` endpoint, which
+     * re-validates consent, the amount range and the duplicate-open-
+     * application rule server-side, and runs the real decision pipeline
+     * (real-application-intake).
+     */
     async submitApplication(f: ApplicationForm): Promise<Result<{ id: string }>> {
       const pre = api.precheckSubmission(f)
       if (pre) return { ok: false, error: pre }
       const b = currentBorrower(store.getState()) as NonNullable<ReturnType<typeof currentBorrower>>
       if (f.amount === null || f.income === null) return { ok: false, error: "Enter your monthly income." }
 
-      await wait(1200)
-
       const income = f.income
       const obligations = f.obligations ?? 0
-      const decision: DecisionRecord = simulateDecision(
-        { product: f.product, amount: f.amount, age: b.age, sanctions: false, defaulted: false, bureau: b.bureau, years: 2026 - b.since, dti: obligations / income, mismatch: 0, stable: b.stable },
-        POLICY
-      )
+      const token = getSessionToken()
+      if (!token) return { ok: false, error: "Your session has ended. Sign in again." }
+
+      let body: unknown
+      try {
+        const res = await fetch(`${API_BASE_URL}/applications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            product: f.product,
+            amount: f.amount,
+            tenor: f.tenor,
+            income,
+            obligations,
+            purpose: f.purpose,
+            consentCredit: f.consentCredit,
+            consentData: f.consentData,
+            consentTerms: f.consentTerms,
+          }),
+        })
+        if (!res.ok) return { ok: false, error: SUBMIT_UNAVAILABLE_ERROR }
+        body = await res.json()
+      } catch {
+        return { ok: false, error: SUBMIT_UNAVAILABLE_ERROR }
+      }
+      const parsed = createApplicationResponseSchema.safeParse(body)
+      if (!parsed.success) return { ok: false, error: SUBMIT_UNAVAILABLE_ERROR }
+      const result = parsed.data
+      if (!result.ok) return { ok: false, error: result.error }
+      const serverId = result.applicationId
+      const decision = result.decision as DecisionRecord
+
       let id = ""
       let dupError = ""
       store.update((s) => {
-        // Re-check after the wait: the borrower may have signed out, or a
-        // second submit (another tab) may have landed.
+        // Re-check after the round trip: the borrower may have signed out, or
+        // a second submit (another tab) may have landed.
         if (s.session !== b.id) {
           dupError = "Your session has ended. Sign in again."
           return
@@ -234,6 +292,7 @@ export function createActions(store: Store, opts: ActionOptions = {}) {
         const a: Application = {
           tenantId: TENANT,
           id,
+          serverId,
           borrower: b.id,
           name: b.name,
           product: f.product,

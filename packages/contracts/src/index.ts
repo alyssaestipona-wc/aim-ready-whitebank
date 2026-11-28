@@ -99,3 +99,40 @@ export type VerifyCodeRequest = z.infer<typeof verifyCodeRequestSchema>
 
 export const verifyCodeResponseSchema = z.discriminatedUnion("ok", [loginSessionResultSchema, loginErrorResultSchema])
 export type VerifyCodeResponse = LoginSessionResult | LoginErrorResult
+
+export const createApplicationRequestSchema = z.object({
+  product: z.enum(["PL", "SL"]),
+  amount: z.number().int().positive(),
+  tenor: z.number().int().positive(),
+  income: z.number().int().positive(),
+  obligations: z.number().int().min(0),
+  purpose: z.string().min(1),
+  consentCredit: z.boolean(),
+  consentData: z.boolean(),
+  consentTerms: z.boolean(),
+})
+export type CreateApplicationRequest = z.infer<typeof createApplicationRequestSchema>
+
+/**
+ * `decision` is the full `DecisionRecord` from `@aim-ready/core`, left
+ * untyped here rather than duplicated: ADR-0002 keeps `packages/contracts`
+ * and `packages/core` from depending on each other, and both apps/api and
+ * apps/web already import `DecisionRecord` from `@aim-ready/core` directly
+ * for their own use, so the consumer casts to that shared type rather
+ * than this package re-describing it.
+ */
+export const createApplicationSuccessSchema = z.object({
+  ok: z.literal(true),
+  applicationId: z.string().min(1),
+  decision: z.unknown(),
+})
+export type CreateApplicationSuccess = z.infer<typeof createApplicationSuccessSchema>
+
+export const createApplicationErrorSchema = z.object({
+  ok: z.literal(false),
+  error: z.string().min(1),
+})
+export type CreateApplicationError = z.infer<typeof createApplicationErrorSchema>
+
+export const createApplicationResponseSchema = z.union([createApplicationSuccessSchema, createApplicationErrorSchema])
+export type CreateApplicationResponse = CreateApplicationSuccess | CreateApplicationError

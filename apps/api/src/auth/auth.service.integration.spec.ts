@@ -43,7 +43,17 @@ describe('AuthService (integration)', () => {
   });
 
   beforeEach(async () => {
-    await repo.clear();
+    // A scoped DELETE, not repo.clear()'s TRUNCATE: `users` is now
+    // referenced by foreign keys (applications, consents, borrower_profiles,
+    // added in real-application-intake), and Postgres refuses to TRUNCATE a
+    // referenced table at all, even an empty one, without CASCADE. A plain,
+    // unscoped DELETE FROM users would still be safe against those FKs (none
+    // of this suite's three emails ever gets an application), but would
+    // raze any row another test file's parallel Jest worker is using against
+    // this same shared database at the same moment - scope to our own rows.
+    await repo.query(
+      "DELETE FROM users WHERE email IN ('juan.delacruz@email.com', 'approver@kalinawbank.ph', 'admin@kalinawbank.ph')",
+    );
     const passwordHash = await bcrypt.hash(PASSWORD, 10);
     await repo.save([
       repo.create({

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { disclosure, effectiveRate, monthlyPayment } from "../loan";
-import { toCentavos } from "../money";
+import { disclosure, effectiveRate, monthlyPayment, toCentavos } from "../index";
 
 // Expected figures come from the prototype's terms() for the same inputs.
 describe("disclosure", () => {

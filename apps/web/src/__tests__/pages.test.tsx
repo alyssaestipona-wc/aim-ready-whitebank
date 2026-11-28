@@ -65,6 +65,30 @@ describe("sign-in", () => {
     renderPage(<SignInPage />, "/sign-in")
     expect(screen.queryByText(/carmela|kalinaw2026/i)).not.toBeInTheDocument()
   })
+
+  it("shows the same generic error for an unknown email as for a wrong password (anti-enumeration)", async () => {
+    renderPage(<SignInPage />, "/sign-in")
+    await userEvent.type(screen.getByLabelText("Email"), "nobody.here@email.com")
+    await userEvent.type(screen.getByLabelText("Password"), "kalinaw2026")
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("Email or password is incorrect.")
+  })
+
+  it("never shows another borrower's account after switching sessions", async () => {
+    await signInAs("juan")
+    const juanRender = renderPage(<HomePage />)
+    expect(screen.getByText("Kalinaw Savings ••4471")).toBeInTheDocument()
+    expect(screen.queryByText("Kalinaw Savings ••2083")).not.toBeInTheDocument()
+    juanRender.unmount()
+
+    await act(async () => {
+      await actions.signOut()
+    })
+    await signInAs("carmela")
+    renderPage(<HomePage />)
+    expect(screen.getByText("Kalinaw Savings ••2083")).toBeInTheDocument()
+    expect(screen.queryByText("Kalinaw Savings ••4471")).not.toBeInTheDocument()
+  })
 })
 
 describe("shell", () => {

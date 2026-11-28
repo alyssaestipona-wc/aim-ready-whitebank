@@ -12,6 +12,7 @@ import { ApplicationEntity } from './application.entity';
 import { ConsentEntity } from './consent.entity';
 import { ApplicationsService } from './applications.service';
 import type { CreateApplicationDto } from './dto/create-application.dto';
+import { APPROVER_AUTHORITY, DECLINE_REASON_CODES } from './policy';
 
 /**
  * Touches TypeORM against the real local PostgreSQL `aimready_test`
@@ -448,6 +449,171 @@ describe('ApplicationsService (integration)', () => {
       await expect(
         service.findOneForTenant(TENANT_ID, 'not-a-uuid'),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('decide', () => {
+    const referred = (over: Partial<ApplicationEntity> = {}) =>
+      applications.save(
+        applications.create({
+          tenantId: TENANT_ID,
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer', grade: 'A' } as never,
+          ...over,
+        }),
+      );
+
+    it('approves within authority, recording the reviewer and returning the monthly repayment', async () => {
+      const app = await referred();
+      const result = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      if (!result.ok || result.stage !== 'Offer') {
+        throw new Error('expected an approval');
+      }
+      expect(result.monthlyPayment).toBeGreaterThan(0);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Offer');
+      expect(stored?.reviewerId).toBe(borrowerId);
+    });
+
+    it('refuses to approve above the amount limit, leaving the application in Review', async () => {
+      const app = await referred({ amount: APPROVER_AUTHORITY.limit + 1 });
+      const result = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      expect(result.ok).toBe(false);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+      expect(stored?.reviewerId).toBeNull();
+    });
+
+    it('refuses to approve a grade outside the allowed grades', async () => {
+      const app = await referred({
+        decision: { outcome: 'refer', grade: 'D' } as never,
+      });
+      const result = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      expect(result.ok).toBe(false);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+    });
+
+    it('refuses to approve a null grade', async () => {
+      const app = await referred({
+        decision: { outcome: 'refer', grade: null } as never,
+      });
+      const result = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('approves exactly at the amount limit (inclusive boundary)', async () => {
+      const app = await referred({ amount: APPROVER_AUTHORITY.limit });
+      const result = await service.decide(user(), app.id, {
+        decision: 'approve',
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it('refuses a second, concurrent decide on the same application', async () => {
+      const app = await referred();
+      const [first, second] = await Promise.allSettled([
+        service.decide(user(), app.id, { decision: 'approve' }),
+        service.decide(user(), app.id, {
+          decision: 'decline',
+          reasonCode: DECLINE_REASON_CODES[0],
+        }),
+      ]);
+      // Exactly one of the two concurrent requests wins; the other is
+      // refused as "not awaiting a decision" (a BadRequestException, the
+      // same race-safety shape as create()'s unique-index catch) - never
+      // both silently applied.
+      const settled = [first, second];
+      const won = settled.filter((r) => r.status === 'fulfilled' && r.value.ok);
+      const lost = settled.filter(
+        (r) =>
+          r.status === 'rejected' && r.reason instanceof BadRequestException,
+      );
+      expect(won).toHaveLength(1);
+      expect(lost).toHaveLength(1);
+    });
+
+    it('declines with a valid reason code, recording the reviewer and the code', async () => {
+      const app = await referred();
+      const reasonCode = DECLINE_REASON_CODES[0];
+      const result = await service.decide(user(), app.id, {
+        decision: 'decline',
+        reasonCode,
+      });
+      expect(result).toEqual({ ok: true, stage: 'Declined' });
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Declined');
+      expect(stored?.reviewerId).toBe(borrowerId);
+      expect(stored?.declineReasonCode).toBe(reasonCode);
+    });
+
+    it('refuses to decline with a missing reason code', async () => {
+      const app = await referred();
+      const result = await service.decide(user(), app.id, {
+        decision: 'decline',
+      });
+      expect(result.ok).toBe(false);
+      const stored = await applications.findOne({ where: { id: app.id } });
+      expect(stored?.stage).toBe('Review');
+    });
+
+    it('refuses to decline with an invalid reason code', async () => {
+      const app = await referred();
+      const result = await service.decide(user(), app.id, {
+        decision: 'decline',
+        reasonCode: 'Not a real reason',
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it('refuses to decide an application not in Review', async () => {
+      const app = await referred({ stage: 'Offer' as const });
+      await expect(
+        service.decide(user(), app.id, { decision: 'approve' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("refuses to decide another tenant's application, same as a missing one", async () => {
+      const app = await referred();
+      await expect(
+        service.decide(
+          { sub: borrowerId, tenantId: 'another-tenant' },
+          app.id,
+          { decision: 'approve' },
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws a distinct failure when the application store is unreachable', async () => {
+      const brokenApplications = {
+        findOne: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+      );
+      await expect(
+        brokenService.decide(user(), '11111111-1111-1111-1111-111111111111', {
+          decision: 'approve',
+        }),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
   });
 });

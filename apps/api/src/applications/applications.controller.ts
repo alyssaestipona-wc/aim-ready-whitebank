@@ -16,12 +16,14 @@ import type { RequestWithSession } from '../auth/guards/session-role.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
   ApplicationsService,
+  type DecideApplicationResult,
   type StaffApplicationDetail,
   type StaffApplicationListItem,
 } from './applications.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { CloseApplicationDto } from './dto/close-application.dto';
 import { ListApplicationsDto } from './dto/list-applications.dto';
+import { DecideApplicationDto } from './dto/decide-application.dto';
 
 const STAFF_ROLES = [
   'branch',
@@ -69,6 +71,22 @@ export class ApplicationsController {
   ): Promise<StaffApplicationDetail> {
     const user = req.user!;
     return this.applications.findOneForTenant(user.tenantId, id);
+  }
+
+  @Patch(':id/decide')
+  @Roles('approver')
+  @HttpCode(200)
+  decide(
+    @Req() req: RequestWithSession,
+    @Param('id') id: string,
+    @Body() dto: DecideApplicationDto,
+  ): Promise<DecideApplicationResult> {
+    const user = req.user!;
+    return this.applications.decide(
+      { sub: user.sub, tenantId: user.tenantId },
+      id,
+      dto,
+    );
   }
 
   @Patch(':id/close')

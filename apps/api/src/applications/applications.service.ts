@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import {
   formatPeso,
+  monthlyPayment,
   simulateDecision,
   type DecisionInput,
   type DecisionRecord,
@@ -21,7 +22,14 @@ import { ApplicationEntity, type ApplicationStage } from './application.entity';
 import { ConsentEntity, type ConsentKind } from './consent.entity';
 import type { CreateApplicationDto } from './dto/create-application.dto';
 import type { ListApplicationsDto } from './dto/list-applications.dto';
-import { PRODUCTS, POLICY } from './policy';
+import type { DecideApplicationDto } from './dto/decide-application.dto';
+import {
+  PRODUCTS,
+  POLICY,
+  APPROVER_AUTHORITY,
+  DECLINE_REASON_CODES,
+  GRADE_RATE,
+} from './policy';
 
 const TERMS_VERSION = 'v3.2';
 const OPEN_STAGES: ApplicationStage[] = ['Review', 'Offer'];
@@ -52,6 +60,11 @@ export type StaffApplicationListItem = {
   outcome: Outcome;
   grade: Grade | null;
 };
+
+export type DecideApplicationResult =
+  | { ok: true; stage: 'Offer'; monthlyPayment: number }
+  | { ok: true; stage: 'Declined' }
+  | { ok: false; error: string };
 
 export type StaffApplicationDetail = {
   id: string;
@@ -346,5 +359,112 @@ export class ApplicationsService {
         termsVersion: c.termsVersion,
       })),
     };
+  }
+
+  /**
+   * An approver decides a referred (`Review`-stage) application. Above-
+   * authority approvals and missing/invalid decline reason codes are
+   * business errors (`{ ok: false }`), not exceptions - the request itself
+   * is well-formed, it is just refused, the same pattern `create()` already
+   * uses for its own business rules.
+   */
+  async decide(
+    user: SessionUser,
+    applicationId: string,
+    dto: DecideApplicationDto,
+  ): Promise<DecideApplicationResult> {
+    if (!UUID_RE.test(applicationId)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    try {
+      application = await this.applications.findOne({
+        where: { id: applicationId },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application decision failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== user.tenantId) {
+      throw new NotFoundException();
+    }
+    if (application.stage !== 'Review') {
+      throw new BadRequestException('Application is not awaiting a decision.');
+    }
+
+    if (dto.decision === 'approve') {
+      const grade = application.decision.grade;
+      if (
+        application.amount > APPROVER_AUTHORITY.limit ||
+        !grade ||
+        !APPROVER_AUTHORITY.grades.includes(grade)
+      ) {
+        return {
+          ok: false,
+          error: `This application is above your delegated authority (limit ${formatPeso(APPROVER_AUTHORITY.limit)}, grades ${APPROVER_AUTHORITY.grades.join('–')}).`,
+        };
+      }
+      await this.applyDecision(application.id, {
+        stage: 'Offer',
+        reviewerId: user.sub,
+        declineReasonCode: null,
+        decidedAt: new Date(),
+      });
+      return {
+        ok: true,
+        stage: 'Offer',
+        monthlyPayment: monthlyPayment(
+          application.amount,
+          application.tenor,
+          GRADE_RATE[grade],
+        ),
+      };
+    }
+
+    if (
+      !dto.reasonCode ||
+      !(DECLINE_REASON_CODES as readonly string[]).includes(dto.reasonCode)
+    ) {
+      return {
+        ok: false,
+        error: `Choose a reason: ${DECLINE_REASON_CODES.join(', ')}.`,
+      };
+    }
+    await this.applyDecision(application.id, {
+      stage: 'Declined',
+      reviewerId: user.sub,
+      declineReasonCode: dto.reasonCode,
+      decidedAt: new Date(),
+    });
+    return { ok: true, stage: 'Declined' };
+  }
+
+  /**
+   * Writes the decision with a conditional `WHERE stage = 'Review'`, not a
+   * plain `findOne` + `save()` - the real race-safe enforcement that only
+   * one of two concurrent decide requests on the same application can ever
+   * win, the same shape `create()`'s partial unique index already gives the
+   * duplicate-open-application rule. `affected === 0` means another request
+   * already decided it between this method's own read and this write.
+   */
+  private async applyDecision(
+    id: string,
+    patch: {
+      stage: 'Offer' | 'Declined';
+      reviewerId: string;
+      declineReasonCode: string | null;
+      decidedAt: Date;
+    },
+  ): Promise<void> {
+    const result = await this.applications
+      .createQueryBuilder()
+      .update(ApplicationEntity)
+      .set(patch)
+      .where('id = :id AND stage = :stage', { id, stage: 'Review' })
+      .execute();
+    if (result.affected !== 1) {
+      throw new BadRequestException('Application is not awaiting a decision.');
+    }
   }
 }

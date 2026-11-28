@@ -56,6 +56,18 @@ export class ApplicationEntity {
   @Column({ type: 'jsonb' })
   decision!: DecisionRecord;
 
+  /** Set when an approver decides a referred (`Review`-stage) application. */
+  @Column({ name: 'reviewer_id', type: 'uuid', nullable: true })
+  reviewerId!: string | null;
+
+  /** Set only on a decline; one of `DECLINE_REASON_CODES`. */
+  @Column({ name: 'decline_reason_code', type: 'varchar', nullable: true })
+  declineReasonCode!: string | null;
+
+  /** When an approver decided this application (approve or decline). */
+  @Column({ name: 'decided_at', type: 'timestamptz', nullable: true })
+  decidedAt!: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 }

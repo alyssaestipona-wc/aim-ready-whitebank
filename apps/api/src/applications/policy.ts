@@ -1,4 +1,4 @@
-import { toCentavos, type DecisionPolicy } from '@aim-ready/core';
+import { toCentavos, type DecisionPolicy, type Grade } from '@aim-ready/core';
 
 export type ProductCode = 'PL' | 'SL';
 
@@ -105,4 +105,35 @@ export const POLICY: DecisionPolicy = {
   ruleSetVersion: 'v4',
   modelVersion: 'PL-Score 3.2',
   bankName: 'Kalinaw',
+};
+
+/**
+ * The single seeded approver authority profile, lifted verbatim from
+ * `apps/backoffice/src/mock/constants.ts`'s `USERS.approver` (the only
+ * delegated-authority check that already exists, informally, in this
+ * codebase's simulated approve-case handler). A real, tenant-configurable,
+ * multi-level approval matrix is the Configuration epic's own future scope
+ * (see staff-decisioning-actions' design.md non-goals) - this is the one
+ * seeded source of truth the real decide pipeline reads for now.
+ */
+export const APPROVER_AUTHORITY: { limit: number; grades: Grade[] } = {
+  limit: toCentavos(1000000),
+  grades: ['A', 'B', 'C'],
+};
+
+/** Lifted verbatim from `apps/backoffice/src/mock/constants.ts`'s `DECLINE_CODES`. */
+export const DECLINE_REASON_CODES = [
+  'Insufficient verified income',
+  'Debt-to-income above policy',
+  'Unable to verify information',
+  'Recent missed payments on other loans',
+] as const;
+
+/** Lifted verbatim from `apps/backoffice/src/mock/constants.ts`'s `GRADE_RATE`. */
+export const GRADE_RATE: Record<Grade, number> = {
+  A: 1.1,
+  B: 1.3,
+  C: 1.5,
+  D: 1.7,
+  E: 1.9,
 };

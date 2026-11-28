@@ -136,3 +136,40 @@ export type CreateApplicationError = z.infer<typeof createApplicationErrorSchema
 
 export const createApplicationResponseSchema = z.union([createApplicationSuccessSchema, createApplicationErrorSchema])
 export type CreateApplicationResponse = CreateApplicationSuccess | CreateApplicationError
+
+/** A tenant-scoped staff list row. `outcome`/`grade` are read off the stored decision record. */
+export const staffApplicationListItemSchema = z.object({
+  id: z.string().min(1),
+  productCode: z.string().min(1),
+  amount: z.number().int(),
+  tenor: z.number().int(),
+  stage: z.string().min(1),
+  outcome: z.string().min(1),
+  grade: z.string().min(1).nullable(),
+})
+export type StaffApplicationListItem = z.infer<typeof staffApplicationListItemSchema>
+
+export const staffApplicationListResponseSchema = z.array(staffApplicationListItemSchema)
+export type StaffApplicationListResponse = z.infer<typeof staffApplicationListResponseSchema>
+
+/** `decision` is `z.unknown()` for the same ADR-0002 reason as `createApplicationSuccessSchema`. */
+export const staffApplicationDetailSchema = z.object({
+  id: z.string().min(1),
+  tenantId: z.string().min(1),
+  borrowerId: z.string().min(1),
+  productCode: z.string().min(1),
+  amount: z.number().int(),
+  tenor: z.number().int(),
+  income: z.number().int(),
+  obligations: z.number().int(),
+  purpose: z.string().min(1),
+  stage: z.string().min(1),
+  decision: z.unknown(),
+  createdAt: z.string().min(1),
+  consents: z.array(z.object({
+    kind: z.string().min(1),
+    capturedAt: z.string().min(1),
+    termsVersion: z.string().min(1),
+  })),
+})
+export type StaffApplicationDetail = z.infer<typeof staffApplicationDetailSchema>

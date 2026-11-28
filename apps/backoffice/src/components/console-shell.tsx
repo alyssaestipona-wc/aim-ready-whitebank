@@ -27,7 +27,7 @@ import { NotificationBell } from "./notification-bell"
 import { StaffStrip } from "./staff-strip"
 import { useConsole } from "./use-console"
 
-const DETAIL_PARENT: Record<string, RouteKey> = { case: "apps", product: "products", template: "templates" }
+const DETAIL_PARENT: Record<string, RouteKey> = { case: "apps", product: "products", template: "templates", "live-case": "live-apps" }
 
 const WIDE = "(min-width: 900px)"
 function subscribeWide(cb: () => void) {

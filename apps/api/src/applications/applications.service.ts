@@ -12,17 +12,22 @@ import {
   simulateDecision,
   type DecisionInput,
   type DecisionRecord,
+  type Grade,
+  type Outcome,
 } from '@aim-ready/core';
 
 import { BorrowerProfileEntity } from './borrower-profile.entity';
 import { ApplicationEntity, type ApplicationStage } from './application.entity';
 import { ConsentEntity, type ConsentKind } from './consent.entity';
 import type { CreateApplicationDto } from './dto/create-application.dto';
+import type { ListApplicationsDto } from './dto/list-applications.dto';
 import { PRODUCTS, POLICY } from './policy';
 
 const TERMS_VERSION = 'v3.2';
 const OPEN_STAGES: ApplicationStage[] = ['Review', 'Offer'];
 const POSTGRES_UNIQUE_VIOLATION = '23505';
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type SessionUser = { sub: string; tenantId: string };
 
@@ -37,6 +42,32 @@ export type SessionUser = { sub: string; tenantId: string };
 export type CreateApplicationResult =
   | { ok: true; applicationId: string; decision: DecisionRecord }
   | { ok: false; error: string };
+
+export type StaffApplicationListItem = {
+  id: string;
+  productCode: string;
+  amount: number;
+  tenor: number;
+  stage: ApplicationStage;
+  outcome: Outcome;
+  grade: Grade | null;
+};
+
+export type StaffApplicationDetail = {
+  id: string;
+  tenantId: string;
+  borrowerId: string;
+  productCode: string;
+  amount: number;
+  tenor: number;
+  income: number;
+  obligations: number;
+  purpose: string;
+  stage: ApplicationStage;
+  decision: DecisionRecord;
+  createdAt: Date;
+  consents: { kind: ConsentKind; capturedAt: Date; termsVersion: string }[];
+};
 
 @Injectable()
 export class ApplicationsService {
@@ -228,5 +259,92 @@ export class ApplicationsService {
     }
     application.stage = stage;
     await this.applications.save(application);
+  }
+
+  /** Staff-facing, tenant-scoped list - never includes another tenant's rows. */
+  async findAllForTenant(
+    tenantId: string,
+    filters: ListApplicationsDto,
+  ): Promise<StaffApplicationListItem[]> {
+    let rows: ApplicationEntity[];
+    try {
+      rows = await this.applications.find({
+        where: {
+          tenantId,
+          ...(filters.stage ? { stage: filters.stage } : {}),
+          ...(filters.product ? { productCode: filters.product } : {}),
+        },
+        order: { createdAt: 'DESC' },
+      });
+    } catch (err) {
+      this.logger.error(
+        'Application list failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    return rows.map((r) => ({
+      id: r.id,
+      productCode: r.productCode,
+      amount: r.amount,
+      tenor: r.tenor,
+      stage: r.stage,
+      outcome: r.decision.outcome,
+      grade: r.decision.grade,
+    }));
+  }
+
+  /**
+   * Staff-facing detail. A missing id and one belonging to another tenant
+   * get the same NotFoundException, the same anti-enumeration rule `close()`
+   * already applies to a borrower's own cross-tenant lookup. A malformed
+   * (non-UUID) id gets the same NotFoundException too, checked before the
+   * query runs - otherwise Postgres' own "invalid input syntax for type
+   * uuid" error would fall into the catch block below and get misreported
+   * as a store outage (503), not the 404 a bad id actually is.
+   */
+  async findOneForTenant(
+    tenantId: string,
+    id: string,
+  ): Promise<StaffApplicationDetail> {
+    if (!UUID_RE.test(id)) throw new NotFoundException();
+    let application: ApplicationEntity | null;
+    let consentRows: ConsentEntity[];
+    try {
+      application = await this.applications.findOne({ where: { id } });
+      consentRows = application
+        ? await this.consents.find({
+            where: { applicationId: application.id },
+          })
+        : [];
+    } catch (err) {
+      this.logger.error(
+        'Application detail failed: store unreachable',
+        err as Error,
+      );
+      throw new ServiceUnavailableException('application_service_unavailable');
+    }
+    if (!application || application.tenantId !== tenantId) {
+      throw new NotFoundException();
+    }
+    return {
+      id: application.id,
+      tenantId: application.tenantId,
+      borrowerId: application.borrowerId,
+      productCode: application.productCode,
+      amount: application.amount,
+      tenor: application.tenor,
+      income: application.income,
+      obligations: application.obligations,
+      purpose: application.purpose,
+      stage: application.stage,
+      decision: application.decision,
+      createdAt: application.createdAt,
+      consents: consentRows.map((c) => ({
+        kind: c.kind,
+        capturedAt: c.capturedAt,
+        termsVersion: c.termsVersion,
+      })),
+    };
   }
 }

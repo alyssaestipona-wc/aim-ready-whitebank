@@ -347,4 +347,107 @@ describe('ApplicationsService (integration)', () => {
       brokenService.create(user(), validDto()),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
+
+  describe('staff read access', () => {
+    it("lists only the caller's tenant applications", async () => {
+      await service.create(user(), validDto());
+      const other = await applications.save(
+        applications.create({
+          tenantId: 'another-tenant',
+          borrowerId,
+          productCode: 'PL',
+          amount: 15_000_000,
+          tenor: 24,
+          income: 6_800_000,
+          obligations: 750_000,
+          purpose: 'Home improvement',
+          stage: 'Review' as const,
+          decision: { outcome: 'refer' } as never,
+        }),
+      );
+      const rows = await service.findAllForTenant(TENANT_ID, {});
+      expect(rows.every((r) => r.id !== other.id)).toBe(true);
+      expect(rows.length).toBeGreaterThan(0);
+    });
+
+    it('filters the list by stage and by product', async () => {
+      const result = await service.create(user(), validDto());
+      if (!result.ok) throw new Error('expected success');
+      const byStage = await service.findAllForTenant(TENANT_ID, {
+        stage: 'Declined',
+      });
+      expect(
+        byStage.find((r) => r.id === result.applicationId),
+      ).toBeUndefined();
+      const byProduct = await service.findAllForTenant(TENANT_ID, {
+        product: 'SL',
+      });
+      expect(
+        byProduct.find((r) => r.id === result.applicationId),
+      ).toBeUndefined();
+    });
+
+    it("returns the full decision record and consents for the caller's tenant", async () => {
+      const result = await service.create(user(), validDto());
+      if (!result.ok) throw new Error('expected success');
+      const detail = await service.findOneForTenant(
+        TENANT_ID,
+        result.applicationId,
+      );
+      expect(detail.decision).toEqual(result.decision);
+      expect(detail.consents).toHaveLength(3);
+      expect(detail.consents.map((c) => c.kind).sort()).toEqual([
+        'credit_check',
+        'data_processing',
+        'terms',
+      ]);
+    });
+
+    it("refuses another tenant's application the same way as a missing one", async () => {
+      const result = await service.create(user(), validDto());
+      if (!result.ok) throw new Error('expected success');
+      await expect(
+        service.findOneForTenant('another-tenant', result.applicationId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws a distinct failure when the application store is unreachable (list)', async () => {
+      const brokenApplications = {
+        find: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+      );
+      await expect(
+        brokenService.findAllForTenant(TENANT_ID, {}),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('throws a distinct failure when the application store is unreachable (detail)', async () => {
+      const brokenApplications = {
+        findOne: () => Promise.reject(new Error('connection refused')),
+      } as unknown as Repository<ApplicationEntity>;
+      const brokenService = new ApplicationsService(
+        brokenApplications,
+        consents,
+        profiles,
+        dataSource,
+      );
+      await expect(
+        brokenService.findOneForTenant(
+          TENANT_ID,
+          '11111111-1111-1111-1111-111111111111',
+        ),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('refuses a malformed id as not-found, never reaching the database', async () => {
+      await expect(
+        service.findOneForTenant(TENANT_ID, 'not-a-uuid'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
 });
